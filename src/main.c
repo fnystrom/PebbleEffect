@@ -15,13 +15,6 @@ enum WeatherKey {
     EFFECT_ESTIMATE_KEY = 0x1
 };
 
-static const uint32_t WEATHER_ICONS[] = {
-  RESOURCE_ID_IMAGE_SUN, //0
-  RESOURCE_ID_IMAGE_CLOUD, //1
-  RESOURCE_ID_IMAGE_RAIN, //2
-  RESOURCE_ID_IMAGE_SNOW //3
-};
-
 static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "App Message Sync Error: %d", app_message_error);
 }
@@ -77,9 +70,8 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(city_layer));
 
   Tuplet initial_values[] = {
-    TupletInteger(WEATHER_ICON_KEY, (uint8_t) 1),
-    TupletCString(WEATHER_TEMPERATURE_KEY, "1234\u00B0C"),
-    TupletCString(WEATHER_CITY_KEY, "St Pebblesburg"),
+    TupletCString(EFFECT_CURRENT_KEY, "0"),
+    TupletCString(EFFECT_ESTIMATE_KEY, "123")
   };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),

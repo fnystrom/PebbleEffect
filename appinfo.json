@@ -1,14 +1,14 @@
 {
-    "versionLabel": "1.1",
+    "versionLabel": "1.3",
     "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
     "appKeys": {
-        "estimate": 1,
-        "current": 0
+        "current": 0,
+        "estimate": 1
     },
     "longName": "Effect",
-    "versionCode": 2,
+    "versionCode": 3,
     "capabilities": [
-        "location"
+        ""
     ],
     "shortName": "Effect",
     "companyName": "fnystrom",
@@ -16,27 +16,6 @@
         "watchface": true
     },
     "resources": {
-        "media": [
-            {
-                "type": "png",
-                "name": "IMAGE_SUN",
-                "file": "images/sun.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_SNOW",
-                "file": "images/snow.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_RAIN",
-                "file": "images/rain.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_CLOUD",
-                "file": "images/cloud.png"
-            }
-        ]
+        "media": []
     }
 }
