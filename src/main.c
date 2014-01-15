@@ -10,9 +10,10 @@ static uint8_t sync_buffer[64];
 
 enum WeatherKey {
     EFFECT_CURRENT_KEY = 0x0,
-    EFFECT_ESTIMATE_KEY = 0x1
+    EFFECT_ESTIMATE_KEY = 0x1,
+	APA_KEY = 2
 };
-
+		
 static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "App Message Sync Error: %d", app_message_error);
 }
@@ -25,6 +26,10 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
 
 	case EFFECT_ESTIMATE_KEY:
       text_layer_set_text(city_layer, new_tuple->value->cstring);
+      break;
+	  
+	  case APA_KEY:
+      text_layer_set_text(temperature_layer, new_tuple->value->cstring);
       break;
   }
 }
@@ -64,9 +69,12 @@ static void window_load(Window *window) {
 
   Tuplet initial_values[] = {
     TupletCString(EFFECT_CURRENT_KEY, "init"),
-    TupletCString(EFFECT_ESTIMATE_KEY, "init")
+    TupletCString(EFFECT_ESTIMATE_KEY, "init"),
+    TupletCString(APA_KEY, "init")
   };
 
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "ARRAY_LENGTH(initial_values)=: " + ARRAY_LENGTH(initial_values));
+	
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
       sync_tuple_changed_callback, sync_error_callback, NULL);
 
