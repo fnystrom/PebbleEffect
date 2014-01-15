@@ -5,6 +5,9 @@ static Window *window;
 static TextLayer *temperature_layer;
 static TextLayer *city_layer;
 static TextLayer *apa_layer;
+static TextLayer *text1_layer;
+static TextLayer *text2_layer;
+static TextLayer *text3_layer;
 
 static AppSync sync;
 static uint8_t sync_buffer[64];
@@ -54,28 +57,55 @@ static void send_cmd(void) {
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
 
-  temperature_layer = text_layer_create(GRect(0, 95, 144, 68));
+  text1_layer = text_layer_create(GRect(0, 20, 144, 68));
+  text_layer_set_text_color(text1_layer, GColorWhite);
+  text_layer_set_background_color(text1_layer, GColorClear);
+  text_layer_set_font(text1_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(text1_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(text1_layer));
+  text_layer_set_text(text1_layer, "Total Effect:");
+	
+  temperature_layer = text_layer_create(GRect(0, 50, 144, 68));
   text_layer_set_text_color(temperature_layer, GColorWhite);
   text_layer_set_background_color(temperature_layer, GColorClear);
   text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(temperature_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(temperature_layer));
 
-  city_layer = text_layer_create(GRect(0, 125, 144, 68));
-  text_layer_set_text_color(city_layer, GColorWhite);
-  text_layer_set_background_color(city_layer, GColorClear);
-  text_layer_set_font(city_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(city_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(city_layer));
-
-  apa_layer = text_layer_create(GRect(0, 65, 144, 68));
+  text2_layer = text_layer_create(GRect(0, 80, 144, 68));
+  text_layer_set_text_color(text2_layer, GColorWhite);
+  text_layer_set_background_color(text2_layer, GColorClear);
+  text_layer_set_font(text2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(text2_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(text2_layer));
+  text_layer_set_text(text2_layer, "Estimate:");
+	
+  apa_layer = text_layer_create(GRect(0, 110, 144, 68));
   text_layer_set_text_color(apa_layer, GColorWhite);
   text_layer_set_background_color(apa_layer, GColorClear);
   text_layer_set_font(apa_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(apa_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(apa_layer));
 
-  Tuplet initial_values[] = {
+/*  text3_layer = text_layer_create(GRect(0, 125, 144, 68));
+  text_layer_set_text_color(text3_layer, GColorWhite);
+  text_layer_set_background_color(text3_layer, GColorClear);
+  text_layer_set_font(text3_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(text3_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(text3_layer));
+  text_layer_set_text(text3_layer, "eliq");
+  */
+	
+	/*
+  city_layer = text_layer_create(GRect(0, 125, 144, 68));
+  text_layer_set_text_color(city_layer, GColorWhite);
+  text_layer_set_background_color(city_layer, GColorClear);
+  text_layer_set_font(city_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(city_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(city_layer));
+*/
+
+	Tuplet initial_values[] = {
     TupletCString(EFFECT_CURRENT_KEY, "100"),
     /*TupletCString(EFFECT_ESTIMATE_KEY, "200"),*/
     TupletCString(EFFECT_APA_KEY, "300")
