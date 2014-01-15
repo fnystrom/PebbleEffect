@@ -11,9 +11,8 @@ static AppSync sync;
 static uint8_t sync_buffer[64];
 
 enum WeatherKey {
-  WEATHER_ICON_KEY = 0x0,         // TUPLE_INT
-  WEATHER_TEMPERATURE_KEY = 0x1,  // TUPLE_CSTRING
-  WEATHER_CITY_KEY = 0x2,         // TUPLE_CSTRING
+	EFFECT_CURRENT_KEY = 0x0,
+    EFFECT_ESTIMATE_KEY = 0x1
 };
 
 static const uint32_t WEATHER_ICONS[] = {
@@ -29,20 +28,13 @@ static void sync_error_callback(DictionaryResult dict_error, AppMessageResult ap
 
 static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tuple, const Tuple* old_tuple, void* context) {
   switch (key) {
-    case WEATHER_ICON_KEY:
-      if (icon_bitmap) {
-        gbitmap_destroy(icon_bitmap);
-      }
-      icon_bitmap = gbitmap_create_with_resource(WEATHER_ICONS[new_tuple->value->uint8]);
-      bitmap_layer_set_bitmap(icon_layer, icon_bitmap);
-      break;
 
-    case WEATHER_TEMPERATURE_KEY:
+	case EFFECT_CURRENT_KEY:
       // App Sync keeps new_tuple in sync_buffer, so we may use it directly
       text_layer_set_text(temperature_layer, new_tuple->value->cstring);
       break;
 
-    case WEATHER_CITY_KEY:
+	case EFFECT_ESTIMATE_KEY:
       text_layer_set_text(city_layer, new_tuple->value->cstring);
       break;
   }

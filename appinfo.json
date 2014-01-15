@@ -2,9 +2,8 @@
     "versionLabel": "1.1",
     "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
     "appKeys": {
-        "city": 2,
-        "temperature": 1,
-        "icon": 0
+        "estimate": 1,
+        "current": 0
     },
     "longName": "Effect",
     "versionCode": 2,
