@@ -11,18 +11,18 @@ function fetchEffect() {
         var current, estimate;
         if (response && response.list && response.list.length > 0) {
           var effectResult = response.list[0];
-          current = effectResult.main.currrent;
-          estimate = effectResult.main.estimate;
+
+          current = effectResult.currrent;
+          estimate = effectResult.estimate;
           
           Pebble.sendAppMessage({
-              "current": current,
-              "estimate": estimate
-          });
+              "current":current,
+              "estimate":estimate});
         }
       } else {
           Pebble.sendAppMessage({
-              "current": 0,
-              "estimate": 0
+              "current":0,
+              "estimate":0
           });
         console.log("Error");
       }
