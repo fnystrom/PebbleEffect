@@ -4,14 +4,12 @@ static Window *window;
 
 static TextLayer *temperature_layer;
 static TextLayer *city_layer;
-static BitmapLayer *icon_layer;
-static GBitmap *icon_bitmap = NULL;
 
 static AppSync sync;
 static uint8_t sync_buffer[64];
 
 enum WeatherKey {
-	EFFECT_CURRENT_KEY = 0x0,
+    EFFECT_CURRENT_KEY = 0x0,
     EFFECT_ESTIMATE_KEY = 0x1
 };
 
@@ -21,9 +19,7 @@ static void sync_error_callback(DictionaryResult dict_error, AppMessageResult ap
 
 static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tuple, const Tuple* old_tuple, void* context) {
   switch (key) {
-
 	case EFFECT_CURRENT_KEY:
-      // App Sync keeps new_tuple in sync_buffer, so we may use it directly
       text_layer_set_text(temperature_layer, new_tuple->value->cstring);
       break;
 
@@ -52,9 +48,6 @@ static void send_cmd(void) {
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
 
-  icon_layer = bitmap_layer_create(GRect(32, 10, 80, 80));
-  layer_add_child(window_layer, bitmap_layer_get_layer(icon_layer));
-
   temperature_layer = text_layer_create(GRect(0, 95, 144, 68));
   text_layer_set_text_color(temperature_layer, GColorWhite);
   text_layer_set_background_color(temperature_layer, GColorClear);
@@ -70,8 +63,8 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(city_layer));
 
   Tuplet initial_values[] = {
-    TupletCString(EFFECT_CURRENT_KEY, "0"),
-    TupletCString(EFFECT_ESTIMATE_KEY, "123")
+    TupletCString(EFFECT_CURRENT_KEY, "init"),
+    TupletCString(EFFECT_ESTIMATE_KEY, "init")
   };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
@@ -83,13 +76,8 @@ static void window_load(Window *window) {
 static void window_unload(Window *window) {
   app_sync_deinit(&sync);
 
-  if (icon_bitmap) {
-    gbitmap_destroy(icon_bitmap);
-  }
-
   text_layer_destroy(city_layer);
   text_layer_destroy(temperature_layer);
-  bitmap_layer_destroy(icon_layer);
 }
 
 static void init(void) {

@@ -7,6 +7,7 @@ function fetchEffect() {
     if (req.readyState == 4) {
       if(req.status == 200) {
         console.log(req.responseText);
+        alert(req.responseText);
         response = JSON.parse(req.responseText);
         var current, estimate;
         if (response && response.list && response.list.length > 0) {
@@ -20,15 +21,16 @@ function fetchEffect() {
           });
         }
       } else {
+          Pebble.sendAppMessage({
+              "current": 0,
+              "estimate": 0
+          });
         console.log("Error");
       }
     }
   };
   req.send(null);
 }
-
-var locationOptions = { "timeout": 15000, "maximumAge": 60000 }; 
-
 
 Pebble.addEventListener("ready",
                         function(e) {
