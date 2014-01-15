@@ -31,16 +31,23 @@ function fetchEffect() {
   req.send(null);
 }
 
+function fetchApa() {
+    Pebble.sendAppMessage({
+        "current":13,
+        "estimate":42
+    });
+}
+
 Pebble.addEventListener("ready",
                         function(e) {
                           console.log("connect!" + e.ready);
-                          fetchEffect();
+                          fetchApa();
                           console.log(e.type);
                         });
 
 Pebble.addEventListener("appmessage",
                         function(e) {
-                          fetchEffect();
+                          fetchApa();
                           console.log(e.type);
                           console.log("message!");
                         });
