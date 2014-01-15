@@ -4,14 +4,15 @@ static Window *window;
 
 static TextLayer *temperature_layer;
 static TextLayer *city_layer;
+static TextLayer *apa_layer;
 
 static AppSync sync;
 static uint8_t sync_buffer[64];
 
-enum WeatherKey {
-    EFFECT_CURRENT_KEY = 0x0,
-    EFFECT_ESTIMATE_KEY = 0x1,
-	APA_KEY = 2
+enum EffectKey {
+    EFFECT_CURRENT_KEY = 0,
+    EFFECT_ESTIMATE_KEY = 1,
+	EFFECT_APA_KEY = 2
 };
 		
 static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
@@ -28,8 +29,8 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
       text_layer_set_text(city_layer, new_tuple->value->cstring);
       break;
 	  
-	  case APA_KEY:
-      text_layer_set_text(temperature_layer, new_tuple->value->cstring);
+	  case EFFECT_APA_KEY:
+      text_layer_set_text(apa_layer, new_tuple->value->cstring);
       break;
   }
 }
@@ -67,25 +68,32 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(city_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(city_layer));
 
+  apa_layer = text_layer_create(GRect(0, 65, 144, 68));
+  text_layer_set_text_color(apa_layer, GColorWhite);
+  text_layer_set_background_color(apa_layer, GColorClear);
+  text_layer_set_font(apa_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(apa_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(apa_layer));
+
   Tuplet initial_values[] = {
-    TupletCString(EFFECT_CURRENT_KEY, "init"),
-    TupletCString(EFFECT_ESTIMATE_KEY, "init"),
-    TupletCString(APA_KEY, "init")
+    TupletCString(EFFECT_CURRENT_KEY, "100"),
+    /*TupletCString(EFFECT_ESTIMATE_KEY, "200"),*/
+    TupletCString(EFFECT_APA_KEY, "300")
   };
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "ARRAY_LENGTH(initial_values)=: " + ARRAY_LENGTH(initial_values));
-	
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
       sync_tuple_changed_callback, sync_error_callback, NULL);
 
   send_cmd();
 }
 
+
 static void window_unload(Window *window) {
   app_sync_deinit(&sync);
 
   text_layer_destroy(city_layer);
   text_layer_destroy(temperature_layer);
+  text_layer_destroy(apa_layer);
 }
 
 static void init(void) {
