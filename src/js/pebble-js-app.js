@@ -26,8 +26,8 @@ function fetchEffect() {
         }
       } else {
           Pebble.sendAppMessage({
-              "current":0,
-              "apa":0
+              "current":"--",
+              "apa":"--"
           });
         console.log("Error");
       }
@@ -36,50 +36,14 @@ function fetchEffect() {
   req.send(null);
 }
 
-function fetchApa() {
-/*    Pebble.sendAppMessage({
-        "estimate":"42"
-    },
-  function(e) {
-    console.log("Successfully delivered message with transactionId=" + e.data.transactionId);
-  },
-  function(e) {
-    console.log("Unable to deliver message with transactionId=" + e.data.transactionId);
-  });
-	*/
-	Pebble.sendAppMessage({
-        "apa":"4","current":"13"
-    },
-  function(e) {
-    console.log("Successfully delivered message with transactionId=" + e.data.transactionId);
-  },
-  function(e) {
-    console.log("Unable to deliver message with transactionId=" + e.data.transactionId);
-  });
-	/*
-	Pebble.sendAppMessage({
-        "current":"13"
-    },
-  function(e) {
-    console.log("Successfully delivered message with transactionId=" + e.data.transactionId);
-  },
-  function(e) {
-    console.log("Unable to deliver message with transactionId=" + e.data.transactionId);
-  });
-  */
-}
-
 Pebble.addEventListener("ready",
                         function(e) {
                           console.log("connect!" + e.ready);
-							//fetchApa();
-							//fetchEffect();
                           console.log(e.type);
                         });
 
 Pebble.addEventListener("appmessage",
                         function(e) {
-                          //fetchApa();
                           fetchEffect();
                           console.log(e.type);
                           console.log("message!");

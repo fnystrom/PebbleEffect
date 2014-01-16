@@ -96,19 +96,9 @@ static void window_load(Window *window) {
   text_layer_set_text(text3_layer, "eliq");
   */
 	
-	/*
-  city_layer = text_layer_create(GRect(0, 125, 144, 68));
-  text_layer_set_text_color(city_layer, GColorWhite);
-  text_layer_set_background_color(city_layer, GColorClear);
-  text_layer_set_font(city_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(city_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(city_layer));
-*/
-
 	Tuplet initial_values[] = {
-    TupletCString(EFFECT_CURRENT_KEY, "100"),
-    /*TupletCString(EFFECT_ESTIMATE_KEY, "200"),*/
-    TupletCString(EFFECT_APA_KEY, "300")
+    TupletCString(EFFECT_CURRENT_KEY, "loading"),
+    TupletCString(EFFECT_APA_KEY, "loading")
   };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
