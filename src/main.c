@@ -63,7 +63,7 @@ static void window_load(Window *window) {
   text_layer_set_font(text1_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(text1_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(text1_layer));
-  text_layer_set_text(text1_layer, "Total Effect:");
+  text_layer_set_text(text1_layer, "Effekt idag:");
 	
   temperature_layer = text_layer_create(GRect(0, 50, 144, 68));
   text_layer_set_text_color(temperature_layer, GColorWhite);
@@ -78,7 +78,7 @@ static void window_load(Window *window) {
   text_layer_set_font(text2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(text2_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(text2_layer));
-  text_layer_set_text(text2_layer, "Estimate:");
+  text_layer_set_text(text2_layer, "Prognos:");
 	
   apa_layer = text_layer_create(GRect(0, 110, 144, 68));
   text_layer_set_text_color(apa_layer, GColorWhite);
@@ -97,8 +97,8 @@ static void window_load(Window *window) {
   */
 	
 	Tuplet initial_values[] = {
-    TupletCString(EFFECT_CURRENT_KEY, "loading"),
-    TupletCString(EFFECT_APA_KEY, "loading")
+    TupletCString(EFFECT_CURRENT_KEY, "laddar..."),
+    TupletCString(EFFECT_APA_KEY, "laddar...")
   };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
