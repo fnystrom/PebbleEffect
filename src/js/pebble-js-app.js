@@ -9,16 +9,10 @@ function fetchEffect() {
         console.log(req.responseText);
         response = JSON.parse(req.responseText);
 
-        console.log(response.current);
-
         var current, estimate;
         if (response) {
-
-
           current = response.current + "kWh";
           estimate = response.estimate + "kWh";
-
-          console.log("X Effekt", current + ", " + estimate);
 			
           Pebble.sendAppMessage({
               "current":current,
@@ -38,15 +32,14 @@ function fetchEffect() {
 
 Pebble.addEventListener("ready",
                         function(e) {
-                          console.log("connect!" + e.ready);
-                          console.log(e.type);
+                          console.log("connect: " + e.type + ", ready:" + e.ready);
+                          fetchEffect();
                         });
 
 Pebble.addEventListener("appmessage",
                         function(e) {
+                          console.log("message: " + e.type);
                           fetchEffect();
-                          console.log(e.type);
-                          console.log("message!");
                         });
 
 Pebble.addEventListener("webviewclosed",

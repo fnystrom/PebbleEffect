@@ -1,5 +1,5 @@
 {
-    "versionLabel": "1.5",
+    "versionLabel": "1.6",
     "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
     "appKeys": {
         "current": 0,
@@ -7,7 +7,7 @@
         "apa": 2
     },
     "longName": "Effect",
-    "versionCode": 5,
+    "versionCode": 6,
     "capabilities": [
         ""
     ],
@@ -18,6 +18,13 @@
     },
     "resources": {
         "media": [
+            {
+                "trackingAdjust": 10,
+                "characterRegex": "[:0-9]",
+                "type": "font",
+                "name": "FONT_ROBOTO_BOLD_CONDENSED_SUBSET_40",
+                "file": "fonts/Roboto-BoldCondensed.ttf"
+            },
             {
                 "menuIcon": true,
                 "type": "png",

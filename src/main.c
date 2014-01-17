@@ -63,6 +63,15 @@ static void send_cmd(void) {
   app_message_outbox_send();
 }
 
+static void handle_minute_tick(struct tm* tick_time, TimeUnits units_changed) {
+  static char time_text[] = "00:00"; // Needs to be static because it's used by the system later.
+
+  strftime(time_text, sizeof(time_text), "%R", tick_time);
+  text_layer_set_text(upper_layer, time_text);
+	
+  send_cmd();
+}
+
 static void handle_bluetooth(bool connected) {
   text_layer_set_text(connection_layer, connected ? "ansluten" : "ej ansluten");
 }
@@ -70,45 +79,45 @@ static void handle_bluetooth(bool connected) {
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
 
-  upper_layer = text_layer_create(GRect(0, 0, 144, 34));
+  upper_layer = text_layer_create(GRect(0, 0, 144, 68));
   text_layer_set_text_color(upper_layer, GColorWhite);
   text_layer_set_background_color(upper_layer, GColorClear);
-  text_layer_set_font(upper_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  text_layer_set_font(upper_layer, fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49));
   text_layer_set_text_alignment(upper_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(upper_layer));
-  text_layer_set_text(upper_layer, "00:00:00");
+  text_layer_set_text(upper_layer, "00:00");
 	
-  text1_layer = text_layer_create(GRect(0, 20, 144, 68));
+  text1_layer = text_layer_create(GRect(0, 50, 144, 68));
   text_layer_set_text_color(text1_layer, GColorWhite);
   text_layer_set_background_color(text1_layer, GColorClear);
-  text_layer_set_font(text1_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_font(text1_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(text1_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(text1_layer));
   text_layer_set_text(text1_layer, "Effekt idag:");
 	
-  temperature_layer = text_layer_create(GRect(0, 50, 144, 68));
+  temperature_layer = text_layer_create(GRect(0, 70, 144, 68));
   text_layer_set_text_color(temperature_layer, GColorWhite);
   text_layer_set_background_color(temperature_layer, GColorClear);
   text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(temperature_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(temperature_layer));
 
-  text2_layer = text_layer_create(GRect(0, 80, 144, 68));
+  text2_layer = text_layer_create(GRect(0, 95, 144, 68));
   text_layer_set_text_color(text2_layer, GColorWhite);
   text_layer_set_background_color(text2_layer, GColorClear);
-  text_layer_set_font(text2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_font(text2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(text2_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(text2_layer));
   text_layer_set_text(text2_layer, "Prognos:");
 	
-  apa_layer = text_layer_create(GRect(0, 110, 144, 68));
+  apa_layer = text_layer_create(GRect(0, 115, 144, 68));
   text_layer_set_text_color(apa_layer, GColorWhite);
   text_layer_set_background_color(apa_layer, GColorClear);
   text_layer_set_font(apa_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(apa_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(apa_layer));
 
-  connection_layer = text_layer_create(GRect(0, 140, 144, 34));
+  connection_layer = text_layer_create(GRect(0, 145, 144, 34));
   text_layer_set_text_color(connection_layer, GColorWhite);
   text_layer_set_background_color(connection_layer, GColorClear);
   text_layer_set_font(connection_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
@@ -116,25 +125,28 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(connection_layer));
   handle_bluetooth(bluetooth_connection_service_peek());
 
-  // Ensures time is displayed immediately (will break if NULL tick event accessed).
-  // (This is why it's a good idea to have a separate routine to do the update itself.)
-  time_t now = time(NULL);
-  struct tm *current_time = localtime(&now);
-  handle_second_tick(current_time, SECOND_UNIT);
-
-  tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
-
   bluetooth_connection_service_subscribe(&handle_bluetooth);
 
   Tuplet initial_values[] = {
-  TupletCString(EFFECT_CURRENT_KEY, "laddar..."),
-  TupletCString(EFFECT_APA_KEY, "laddar...")
-};
+    TupletCString(EFFECT_CURRENT_KEY, "laddar..."),
+    TupletCString(EFFECT_APA_KEY, "laddar...")
+  };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
       sync_tuple_changed_callback, sync_error_callback, NULL);
 
-  send_cmd();
+//  send_cmd();
+
+  // Ensures time is displayed immediately (will break if NULL tick event accessed).
+  // (This is why it's a good idea to have a separate routine to do the update itself.)
+  time_t now = time(NULL);
+  struct tm *current_time = localtime(&now);
+  //handle_second_tick(current_time, SECOND_UNIT);
+
+  //tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
+
+  handle_minute_tick(current_time, MINUTE_UNIT);
+  tick_timer_service_subscribe(MINUTE_UNIT, &handle_minute_tick);
 }
 
 
