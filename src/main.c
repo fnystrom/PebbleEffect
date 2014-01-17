@@ -7,7 +7,8 @@ static TextLayer *city_layer;
 static TextLayer *apa_layer;
 static TextLayer *text1_layer;
 static TextLayer *text2_layer;
-static TextLayer *text3_layer;
+static TextLayer *connection_layer;
+static TextLayer *upper_layer;
 
 static AppSync sync;
 static uint8_t sync_buffer[64];
@@ -38,6 +39,14 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
   }
 }
 
+// Called once per second
+static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
+  static char time_text[] = "00:00:00"; // Needs to be static because it's used by the system later.
+
+  strftime(time_text, sizeof(time_text), "%T", tick_time);
+  text_layer_set_text(upper_layer, time_text);
+}
+
 static void send_cmd(void) {
   Tuplet value = TupletInteger(1, 1);
 
@@ -54,9 +63,21 @@ static void send_cmd(void) {
   app_message_outbox_send();
 }
 
+static void handle_bluetooth(bool connected) {
+  text_layer_set_text(connection_layer, connected ? "ansluten" : "ej ansluten");
+}
+
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
 
+  upper_layer = text_layer_create(GRect(0, 0, 144, 34));
+  text_layer_set_text_color(upper_layer, GColorWhite);
+  text_layer_set_background_color(upper_layer, GColorClear);
+  text_layer_set_font(upper_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  text_layer_set_text_alignment(upper_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(upper_layer));
+  text_layer_set_text(upper_layer, "00:00:00");
+	
   text1_layer = text_layer_create(GRect(0, 20, 144, 68));
   text_layer_set_text_color(text1_layer, GColorWhite);
   text_layer_set_background_color(text1_layer, GColorClear);
@@ -87,19 +108,28 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(apa_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(apa_layer));
 
-/*  text3_layer = text_layer_create(GRect(0, 125, 144, 68));
-  text_layer_set_text_color(text3_layer, GColorWhite);
-  text_layer_set_background_color(text3_layer, GColorClear);
-  text_layer_set_font(text3_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(text3_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(text3_layer));
-  text_layer_set_text(text3_layer, "eliq");
-  */
-	
-	Tuplet initial_values[] = {
-    TupletCString(EFFECT_CURRENT_KEY, "laddar..."),
-    TupletCString(EFFECT_APA_KEY, "laddar...")
-  };
+  connection_layer = text_layer_create(GRect(0, 140, 144, 34));
+  text_layer_set_text_color(connection_layer, GColorWhite);
+  text_layer_set_background_color(connection_layer, GColorClear);
+  text_layer_set_font(connection_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  text_layer_set_text_alignment(connection_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(connection_layer));
+  handle_bluetooth(bluetooth_connection_service_peek());
+
+  // Ensures time is displayed immediately (will break if NULL tick event accessed).
+  // (This is why it's a good idea to have a separate routine to do the update itself.)
+  time_t now = time(NULL);
+  struct tm *current_time = localtime(&now);
+  handle_second_tick(current_time, SECOND_UNIT);
+
+  tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
+
+  bluetooth_connection_service_subscribe(&handle_bluetooth);
+
+  Tuplet initial_values[] = {
+  TupletCString(EFFECT_CURRENT_KEY, "laddar..."),
+  TupletCString(EFFECT_APA_KEY, "laddar...")
+};
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
       sync_tuple_changed_callback, sync_error_callback, NULL);
@@ -110,10 +140,16 @@ static void window_load(Window *window) {
 
 static void window_unload(Window *window) {
   app_sync_deinit(&sync);
+  tick_timer_service_unsubscribe();
+  bluetooth_connection_service_unsubscribe();
 
+  text_layer_destroy(upper_layer);
   text_layer_destroy(city_layer);
   text_layer_destroy(temperature_layer);
   text_layer_destroy(apa_layer);
+  text_layer_destroy(text1_layer);
+  text_layer_destroy(text2_layer);
+  text_layer_destroy(connection_layer);
 }
 
 static void init(void) {
