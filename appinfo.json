@@ -1,17 +1,19 @@
 {
-    "versionLabel": "1.6",
+    "versionLabel": "1.7",
     "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
     "appKeys": {
         "current": 0,
         "estimate": 1,
-        "apa": 2
+        "apa": 2,
+        "accesstoken": 4,
+        "background": 3
     },
-    "longName": "Effect",
-    "versionCode": 6,
+    "longName": "EliqEffect",
+    "versionCode": 7,
     "capabilities": [
-        ""
+        "configurable"
     ],
-    "shortName": "Effect",
+    "shortName": "EliqEffect",
     "companyName": "fnystrom",
     "watchapp": {
         "watchface": true

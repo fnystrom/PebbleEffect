@@ -1,14 +1,15 @@
 #include "pebble.h"
+	
+Window *window;
 
-static Window *window;
-
-static TextLayer *temperature_layer;
-static TextLayer *city_layer;
-static TextLayer *apa_layer;
-static TextLayer *text1_layer;
-static TextLayer *text2_layer;
-static TextLayer *connection_layer;
-static TextLayer *upper_layer;
+TextLayer *current_power_layer;
+TextLayer *estimate_power_layer;
+TextLayer *text1_layer;
+TextLayer *text2_layer;
+TextLayer *connection_layer;
+TextLayer *battery_layer;
+TextLayer *upper_layer;
+InverterLayer *inverter_layer;
 
 static AppSync sync;
 static uint8_t sync_buffer[64];
@@ -16,35 +17,73 @@ static uint8_t sync_buffer[64];
 enum EffectKey {
     EFFECT_CURRENT_KEY = 0,
     EFFECT_ESTIMATE_KEY = 1,
-	EFFECT_APA_KEY = 2
+	EFFECT_APA_KEY = 2,
+	EFFECT_BACKGROUND_KEY = 3
 };
 		
 static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "App Message Sync Error: %d", app_message_error);
 }
 
-static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tuple, const Tuple* old_tuple, void* context) {
-  switch (key) {
-	case EFFECT_CURRENT_KEY:
-      text_layer_set_text(temperature_layer, new_tuple->value->cstring);
-      break;
+void update_configuration(void)
+{
+    static bool old_inv = 0;    /* default to not inverted */
 
-	case EFFECT_ESTIMATE_KEY:
-      text_layer_set_text(city_layer, new_tuple->value->cstring);
-      break;
-	  
-	  case EFFECT_APA_KEY:
-      text_layer_set_text(apa_layer, new_tuple->value->cstring);
-      break;
-  }
+    if (persist_exists(EFFECT_BACKGROUND_KEY))
+    {
+        bool inv = persist_read_bool(EFFECT_BACKGROUND_KEY);
+
+        if (inv != old_inv)
+        {
+            Layer *inv_layer = inverter_layer_get_layer(inverter_layer);
+
+            if (inv)
+            {
+                layer_add_child(window_get_root_layer(window), inv_layer);
+            }
+            else
+            {
+                layer_remove_from_parent(inv_layer);
+            }
+
+            old_inv = inv;
+        }
+    }
 }
 
-// Called once per second
-static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
-  static char time_text[] = "00:00:00"; // Needs to be static because it's used by the system later.
+static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tuple, const Tuple* old_tuple, void* context) {
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "tuple: %d, %s", (int)key, new_tuple->value->cstring);
 
-  strftime(time_text, sizeof(time_text), "%T", tick_time);
-  text_layer_set_text(upper_layer, time_text);
+  switch (key) {
+	case EFFECT_CURRENT_KEY:
+	  //APP_LOG(APP_LOG_LEVEL_DEBUG, "EFFECT_CURRENT_KEY");
+      text_layer_set_text(current_power_layer, new_tuple->value->cstring);
+      break;
+
+	case EFFECT_APA_KEY:
+	  //APP_LOG(APP_LOG_LEVEL_DEBUG, "EFFECT_APA_KEY");
+      text_layer_set_text(estimate_power_layer, new_tuple->value->cstring);
+      break;
+	  
+	case EFFECT_BACKGROUND_KEY:
+      //APP_LOG(APP_LOG_LEVEL_DEBUG, "EFFECT_BACKGROUND_KEY");
+	  //app_log(APP_LOG_LEVEL_DEBUG, __FILE__,__LINE__,"bg=%s",new_tuple->value->cstring);
+
+      if (strcmp(new_tuple->value->cstring, "black") == 0)
+      {
+          persist_write_bool(EFFECT_BACKGROUND_KEY, false);
+      }
+      else
+      {
+          persist_write_bool(EFFECT_BACKGROUND_KEY, true);
+      }
+	  update_configuration();
+      break;
+	  
+  	default:
+	  //APP_LOG(APP_LOG_LEVEL_DEBUG, "default");
+	  break;	
+  }
 }
 
 static void send_cmd(void) {
@@ -63,13 +102,45 @@ static void send_cmd(void) {
   app_message_outbox_send();
 }
 
+static void handle_battery(BatteryChargeState charge_state) {
+  static char battery_text[] = "100% laddat";
+
+  if (charge_state.is_charging) {
+    snprintf(battery_text, sizeof(battery_text), "laddar");
+  } else {
+    snprintf(battery_text, sizeof(battery_text), "%d%%", charge_state.charge_percent);
+  }
+  text_layer_set_text(battery_layer, battery_text);
+}
+
 static void handle_minute_tick(struct tm* tick_time, TimeUnits units_changed) {
-  static char time_text[] = "00:00"; // Needs to be static because it's used by the system later.
+  static char time_text[] = "00:00";
 
   strftime(time_text, sizeof(time_text), "%R", tick_time);
   text_layer_set_text(upper_layer, time_text);
+
+  APP_LOG(APP_LOG_LEVEL_DEBUG, time_text);
 	
-  send_cmd();
+  static char minute_text[] = "00";
+
+  strftime(minute_text, sizeof(minute_text), "%M", tick_time);
+
+  if ((strcmp(minute_text, "30") == 0) ||
+	  (strcmp(minute_text, "31") == 0) ||
+	  (strcmp(minute_text, "32") == 0) ||
+	  (strcmp(minute_text, "33") == 0) ||
+	  (strcmp(minute_text, "34") == 0) ||
+	  (strcmp(minute_text, "35") == 0) ||
+	  (strcmp(minute_text, "40") == 0) ||
+	  (strcmp(minute_text, "50") == 0) ||
+	  (strcmp(minute_text, "00") == 0) ||
+	  (strcmp(minute_text, "10") == 0) ||
+	  (strcmp(minute_text, "20") == 0))
+  {
+    send_cmd();
+  }
+
+  handle_battery(battery_state_service_peek());
 }
 
 static void handle_bluetooth(bool connected) {
@@ -95,12 +166,12 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(text1_layer));
   text_layer_set_text(text1_layer, "Effekt idag:");
 	
-  temperature_layer = text_layer_create(GRect(0, 70, 144, 68));
-  text_layer_set_text_color(temperature_layer, GColorWhite);
-  text_layer_set_background_color(temperature_layer, GColorClear);
-  text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(temperature_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(temperature_layer));
+  current_power_layer = text_layer_create(GRect(0, 70, 144, 68));
+  text_layer_set_text_color(current_power_layer, GColorWhite);
+  text_layer_set_background_color(current_power_layer, GColorClear);
+  text_layer_set_font(current_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(current_power_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(current_power_layer));
 
   text2_layer = text_layer_create(GRect(0, 95, 144, 68));
   text_layer_set_text_color(text2_layer, GColorWhite);
@@ -110,58 +181,73 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(text2_layer));
   text_layer_set_text(text2_layer, "Prognos:");
 	
-  apa_layer = text_layer_create(GRect(0, 115, 144, 68));
-  text_layer_set_text_color(apa_layer, GColorWhite);
-  text_layer_set_background_color(apa_layer, GColorClear);
-  text_layer_set_font(apa_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(apa_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(apa_layer));
+  estimate_power_layer = text_layer_create(GRect(0, 115, 144, 68));
+  text_layer_set_text_color(estimate_power_layer, GColorWhite);
+  text_layer_set_background_color(estimate_power_layer, GColorClear);
+  text_layer_set_font(estimate_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(estimate_power_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(estimate_power_layer));
 
-  connection_layer = text_layer_create(GRect(0, 145, 144, 34));
+  connection_layer = text_layer_create(GRect(0, 145, 72, 34));
   text_layer_set_text_color(connection_layer, GColorWhite);
   text_layer_set_background_color(connection_layer, GColorClear);
   text_layer_set_font(connection_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-  text_layer_set_text_alignment(connection_layer, GTextAlignmentCenter);
+  text_layer_set_text_alignment(connection_layer, GTextAlignmentLeft);
   layer_add_child(window_layer, text_layer_get_layer(connection_layer));
+
+  battery_layer = text_layer_create(GRect(72, 145, 72, 34));
+  text_layer_set_text_color(battery_layer, GColorWhite);
+  text_layer_set_background_color(battery_layer, GColorClear);
+  text_layer_set_font(battery_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  text_layer_set_text_alignment(battery_layer, GTextAlignmentRight);
+  layer_add_child(window_layer, text_layer_get_layer(battery_layer));
+
+  inverter_layer = inverter_layer_create(GRect(0, 0, 144, 168));
+  
   handle_bluetooth(bluetooth_connection_service_peek());
 
+  battery_state_service_subscribe(&handle_battery);
   bluetooth_connection_service_subscribe(&handle_bluetooth);
 
+  bool inv = persist_read_bool(EFFECT_BACKGROUND_KEY);
+  
+  char *string = "black";
+	
+  if(inv){
+	  string = "white";
+  }
+  
   Tuplet initial_values[] = {
     TupletCString(EFFECT_CURRENT_KEY, "laddar..."),
-    TupletCString(EFFECT_APA_KEY, "laddar...")
+    TupletCString(EFFECT_APA_KEY, "laddar..."),
+	TupletCString(EFFECT_BACKGROUND_KEY, string)
   };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
       sync_tuple_changed_callback, sync_error_callback, NULL);
 
-//  send_cmd();
-
-  // Ensures time is displayed immediately (will break if NULL tick event accessed).
-  // (This is why it's a good idea to have a separate routine to do the update itself.)
   time_t now = time(NULL);
   struct tm *current_time = localtime(&now);
-  //handle_second_tick(current_time, SECOND_UNIT);
-
-  //tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
-
   handle_minute_tick(current_time, MINUTE_UNIT);
   tick_timer_service_subscribe(MINUTE_UNIT, &handle_minute_tick);
-}
 
+  update_configuration();
+}
 
 static void window_unload(Window *window) {
   app_sync_deinit(&sync);
   tick_timer_service_unsubscribe();
   bluetooth_connection_service_unsubscribe();
+  battery_state_service_unsubscribe();
+  inverter_layer_destroy(inverter_layer);
 
   text_layer_destroy(upper_layer);
-  text_layer_destroy(city_layer);
-  text_layer_destroy(temperature_layer);
-  text_layer_destroy(apa_layer);
+  text_layer_destroy(current_power_layer);
+  text_layer_destroy(estimate_power_layer);
   text_layer_destroy(text1_layer);
   text_layer_destroy(text2_layer);
   text_layer_destroy(connection_layer);
+  text_layer_destroy(battery_layer);
 }
 
 static void init(void) {
@@ -189,5 +275,4 @@ int main(void) {
   init();
   app_event_loop();
   deinit();
-	
 }
