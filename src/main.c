@@ -17,8 +17,9 @@ static uint8_t sync_buffer[64];
 enum EffectKey {
     EFFECT_CURRENT_KEY = 0,
     EFFECT_ESTIMATE_KEY = 1,
-	EFFECT_APA_KEY = 2,
-	EFFECT_BACKGROUND_KEY = 3
+	EFFECT_FORECAST_KEY = 2,
+	EFFECT_BACKGROUND_KEY = 3,
+	EFFECT_MODE_KEY = 5
 };
 		
 static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
@@ -51,24 +52,52 @@ void update_configuration(void)
     }
 }
 
+static void send_cmd(void) {
+  Tuplet value = TupletInteger(1, 1);
+
+  DictionaryIterator *iter;
+  app_message_outbox_begin(&iter);
+
+  if (iter == NULL) {
+    return;
+  }
+
+  dict_write_tuplet(iter, &value);
+  dict_write_end(iter);
+
+  app_message_outbox_send();
+}
+
 static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tuple, const Tuple* old_tuple, void* context) {
   //APP_LOG(APP_LOG_LEVEL_DEBUG, "tuple: %d, %s", (int)key, new_tuple->value->cstring);
 
   switch (key) {
 	case EFFECT_CURRENT_KEY:
-	  //APP_LOG(APP_LOG_LEVEL_DEBUG, "EFFECT_CURRENT_KEY");
       text_layer_set_text(current_power_layer, new_tuple->value->cstring);
       break;
 
-	case EFFECT_APA_KEY:
-	  //APP_LOG(APP_LOG_LEVEL_DEBUG, "EFFECT_APA_KEY");
+	case EFFECT_FORECAST_KEY:
       text_layer_set_text(estimate_power_layer, new_tuple->value->cstring);
       break;
 	  
+	case EFFECT_MODE_KEY:
+	  if (strcmp(new_tuple->value->cstring, "forecast") == 0)
+      {
+		  if (!persist_read_bool(EFFECT_MODE_KEY)){send_cmd();}
+          persist_write_bool(EFFECT_MODE_KEY, true);
+		  text_layer_set_text(text1_layer, "Effekt idag:");
+		  text_layer_set_text(text2_layer, "Prognos:");
+      }
+      else
+      {
+          if (persist_read_bool(EFFECT_MODE_KEY)){send_cmd();}
+		  persist_write_bool(EFFECT_MODE_KEY, false);
+		  text_layer_set_text(text1_layer, "Just nu:");
+		  text_layer_set_text(text2_layer, "Diff:");
+      }
+      break;
+	  
 	case EFFECT_BACKGROUND_KEY:
-      //APP_LOG(APP_LOG_LEVEL_DEBUG, "EFFECT_BACKGROUND_KEY");
-	  //app_log(APP_LOG_LEVEL_DEBUG, __FILE__,__LINE__,"bg=%s",new_tuple->value->cstring);
-
       if (strcmp(new_tuple->value->cstring, "black") == 0)
       {
           persist_write_bool(EFFECT_BACKGROUND_KEY, false);
@@ -86,22 +115,6 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
   }
 }
 
-static void send_cmd(void) {
-  Tuplet value = TupletInteger(1, 1);
-
-  DictionaryIterator *iter;
-  app_message_outbox_begin(&iter);
-
-  if (iter == NULL) {
-    return;
-  }
-
-  dict_write_tuplet(iter, &value);
-  dict_write_end(iter);
-
-  app_message_outbox_send();
-}
-
 static void handle_battery(BatteryChargeState charge_state) {
   static char battery_text[] = "100% laddat";
 
@@ -113,33 +126,48 @@ static void handle_battery(BatteryChargeState charge_state) {
   text_layer_set_text(battery_layer, battery_text);
 }
 
-static void handle_minute_tick(struct tm* tick_time, TimeUnits units_changed) {
+static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
+  bool forecast = persist_read_bool(EFFECT_MODE_KEY);
+  
   static char time_text[] = "00:00";
 
   strftime(time_text, sizeof(time_text), "%R", tick_time);
   text_layer_set_text(upper_layer, time_text);
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, time_text);
-	
+  static char second_text[] = "00";
+
+  strftime(second_text, sizeof(second_text), "%S", tick_time);
+
   static char minute_text[] = "00";
 
   strftime(minute_text, sizeof(minute_text), "%M", tick_time);
 
-  if ((strcmp(minute_text, "30") == 0) ||
-	  (strcmp(minute_text, "31") == 0) ||
-	  (strcmp(minute_text, "32") == 0) ||
-	  (strcmp(minute_text, "33") == 0) ||
-	  (strcmp(minute_text, "34") == 0) ||
-	  (strcmp(minute_text, "35") == 0) ||
-	  (strcmp(minute_text, "40") == 0) ||
-	  (strcmp(minute_text, "50") == 0) ||
-	  (strcmp(minute_text, "00") == 0) ||
-	  (strcmp(minute_text, "10") == 0) ||
-	  (strcmp(minute_text, "20") == 0))
-  {
-    send_cmd();
+  if(!forecast){
+    if(strcmp(second_text, "00") == 0 ||
+	   strcmp(second_text, "10") == 0 ||
+	   strcmp(second_text, "20") == 0 ||
+	   strcmp(second_text, "30") == 0 ||
+	   strcmp(second_text, "40") == 0 ||
+	   strcmp(second_text, "50") == 0){
+        send_cmd();   
+	  }		
+  } else if(forecast && strcmp(second_text, "00") == 0){
+    if ((strcmp(minute_text, "30") == 0) ||
+	    (strcmp(minute_text, "31") == 0) ||
+	    (strcmp(minute_text, "32") == 0) ||
+	    (strcmp(minute_text, "33") == 0) ||
+	    (strcmp(minute_text, "34") == 0) ||
+	    (strcmp(minute_text, "35") == 0) ||
+	    (strcmp(minute_text, "40") == 0) ||
+	    (strcmp(minute_text, "50") == 0) ||
+  	    (strcmp(minute_text, "00") == 0) ||
+	    (strcmp(minute_text, "10") == 0) ||
+	    (strcmp(minute_text, "20") == 0))
+    {
+      send_cmd();
+    }
   }
-
+	
   handle_battery(battery_state_service_peek());
 }
 
@@ -210,17 +238,22 @@ static void window_load(Window *window) {
   bluetooth_connection_service_subscribe(&handle_bluetooth);
 
   bool inv = persist_read_bool(EFFECT_BACKGROUND_KEY);
-  
   char *string = "black";
-	
   if(inv){
 	  string = "white";
   }
   
+  bool forecast = persist_read_bool(EFFECT_MODE_KEY);
+  char *s_forecast = "now";
+  if(forecast){
+	s_forecast = "forecast";
+  }
+	
   Tuplet initial_values[] = {
     TupletCString(EFFECT_CURRENT_KEY, "laddar..."),
-    TupletCString(EFFECT_APA_KEY, "laddar..."),
-	TupletCString(EFFECT_BACKGROUND_KEY, string)
+    TupletCString(EFFECT_FORECAST_KEY, "laddar..."),
+	TupletCString(EFFECT_BACKGROUND_KEY, string),
+	TupletCString(EFFECT_MODE_KEY, s_forecast)
   };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
@@ -228,8 +261,8 @@ static void window_load(Window *window) {
 
   time_t now = time(NULL);
   struct tm *current_time = localtime(&now);
-  handle_minute_tick(current_time, MINUTE_UNIT);
-  tick_timer_service_subscribe(MINUTE_UNIT, &handle_minute_tick);
+  handle_second_tick(current_time, SECOND_UNIT);
+  tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
 
   update_configuration();
 }

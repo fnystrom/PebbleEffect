@@ -2,11 +2,12 @@
     "versionLabel": "1.7",
     "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
     "appKeys": {
-        "current": 0,
-        "estimate": 1,
-        "apa": 2,
         "accesstoken": 4,
-        "background": 3
+        "forecast": 2,
+        "current": 0,
+        "mode": 5,
+        "background": 3,
+        "estimate": 1
     },
     "longName": "EliqEffect",
     "versionCode": 7,
