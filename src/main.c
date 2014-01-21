@@ -106,11 +106,14 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
         int currentpower = atoi(new_tuple->value->cstring);
 		int diff = currentpower - previouspower;
 		previouspower = currentpower;
-  	    char str[15];
-        mini_snprintf(str, sizeof(str), "%dW", diff);
-		  //APP_LOG(APP_LOG_LEVEL_DEBUG, "str: %s", str);
+  	    static char str[15];
+        
+		if(diff > 0){
+		  snprintf(str, sizeof(str), "+%dW", diff);
+		} else {
+		  snprintf(str, sizeof(str), "%dW", diff);
+        }
 		text_layer_set_text(estimate_power_layer, str);
-//		text_layer_set_text(estimate_power_layer, "");
 	  }
       break;
 
@@ -248,7 +251,7 @@ static void window_load(Window *window) {
   text_layer_set_background_color(temperature_layer, GColorClear);
   //text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(temperature_layer, GTextAlignmentLeft);
+  text_layer_set_text_alignment(temperature_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(temperature_layer));
   text_layer_set_text(temperature_layer, "-23C");
 	
@@ -268,7 +271,7 @@ static void window_load(Window *window) {
   text_layer_set_background_color(current_power_layer, GColorClear);
   //text_layer_set_font(current_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_font(current_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(current_power_layer, GTextAlignmentLeft);
+  text_layer_set_text_alignment(current_power_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(current_power_layer));
 
 	
@@ -286,7 +289,7 @@ static void window_load(Window *window) {
   text_layer_set_background_color(estimate_power_layer, GColorClear);	
   //text_layer_set_font(estimate_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_font(estimate_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(estimate_power_layer, GTextAlignmentLeft);
+  text_layer_set_text_alignment(estimate_power_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(estimate_power_layer));
 
 	
