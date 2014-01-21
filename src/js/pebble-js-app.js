@@ -8,9 +8,7 @@ function appMessageNack(e) {
 
 Pebble.addEventListener("showConfiguration", function() {
     var options = JSON.parse(window.localStorage.getItem('options'));
-    //console.log("read options: " + JSON.stringify(options));
-    //console.log("showing configuration");
-	var uri;
+    var uri;
 	
     if (options === null) {
         uri = 'http://effektprognos.azurewebsites.net/eliqeffekt.html';
@@ -21,14 +19,11 @@ Pebble.addEventListener("showConfiguration", function() {
 });
 
 Pebble.addEventListener("webviewclosed", function(e) {
-    //console.log("configuration closed");
     if (e.response !== '') {
         var options = JSON.parse(decodeURIComponent(e.response));
-		//console.log("storing options: " + JSON.stringify(options));
         window.localStorage.setItem('options', JSON.stringify(options));
 		var background = {'background':options.background,'mode':options.mode};
-        //Pebble.showSimpleNotificationOnPebble("conf", JSON.stringify(background));
-		console.log("sending options: " + JSON.stringify(background));
+        
 		Pebble.sendAppMessage(background, appMessageAck, appMessageNack);
     } else {
         console.log("no options received");
@@ -46,11 +41,41 @@ function today(){
   return _today;
 }
 
-function fetchEliqEffect() {
+function getTemperature(){
+  var response = "-1";
+
+  var request = new XMLHttpRequest();
+
+  request.open('GET', "http://www.temperatur.nu/termo/toltorpsdalen/temp.txt", true);
+	
+  request.ontimeout = function(f) {
+    console.log("timeout");
+  }
+  request.onerror = function(f) {
+    console.log("error");
+  }
+	
+  request.onreadystatechange = function(e) {
+    if (request.readyState == 4) {
+      if(request.status == 200 || request.status == 201) {
+		console.log();
+        response = parseFloat(request.responseText);
+        console.log(response);
+		Pebble.sendAppMessage({"temperature":response + "\u00B0C"});
+      }
+    }
+  };	
+  
+  request.send(null);
+	
+  return response;
+}
+
+function fetchTodayEffect() {
   var response;
   var req = new XMLHttpRequest();
   var accesstoken="";
-  var mode="";
+//  var mode="";
   var options = JSON.parse(window.localStorage.getItem('options'));
   if (options === null) {
     Pebble.sendAppMessage({"current":"--","forecast":"--"});
@@ -61,14 +86,15 @@ function fetchEliqEffect() {
       return;
     } else {
       accesstoken = options.accesstoken;	
-	  mode = options.mode;
+//      mode = options.mode;
     }
   }
-	console.log("storing options: " + JSON.stringify(options));
+  
+  //console.log("storing options: " + JSON.stringify(options));
 	
-  if(mode == "forecast"){
+//  if(mode == "forecast"){
     req.open('GET', "https://my.eliq.se/api/data?accesstoken="+accesstoken+"&startdate="+today()+"&intervaltype=hour", true);
-    console.log("Calling eliq data...");
+    //console.log("Calling eliq data...");
     req.onload = function(e) {
       if (req.readyState == 4) {
         if(req.status == 200 || req.status == 201) {
@@ -77,18 +103,18 @@ function fetchEliqEffect() {
           var current, estimate;
           if (response) {
             var hourCount = response.data.length;
-		    var totalEnergy=0;
+            var totalEnergy=0;
 			
-		    var i;
-		    for(i=0; i<hourCount;i++){
-			  var energy = response.data[i].energy;
-			  totalEnergy += energy;
-		    }
+            var i;
+            for(i=0; i<hourCount;i++){
+              var energy = response.data[i].energy;
+              totalEnergy += energy;
+            }
 			
             current = Math.round(totalEnergy/1000) + "kWh";
             estimate = Math.round(totalEnergy/hourCount*24/1000) + "kWh";
                         
-		    console.log("current=" + current + ", estimate=" + estimate);
+            //console.log("current=" + current + ", estimate=" + estimate);
 			
             Pebble.sendAppMessage({
               "current":current,
@@ -102,26 +128,24 @@ function fetchEliqEffect() {
         }
       }
     };
-  } else {
+  /*} else {
     req.open('GET', "https://my.eliq.se/api/datanow?accesstoken=" + accesstoken, true);
-    console.log("Calling eliq datanow...");
+    //console.log("Calling eliq datanow...");
     req.onload = function(e) {
       if (req.readyState == 4) {
         if(req.status == 200 || req.status == 201) {
           response = JSON.parse(req.responseText);
 
-          var current, estimate;
+          var current;
           if (response) {
             console.log(JSON.stringify(response));
-			  
-            current = response.power+"W";
-            estimate = "0W";
-                        
-		    console.log("current=" + current + ", estimate=" + estimate);
-			
+
+            current = response.power;
+            var diff = 0;
+
             Pebble.sendAppMessage({
-              "current":current,
-              "forecast":estimate});
+              "current":current+"W",
+              "forecast":diff+"W"});
           }
         } else {
           Pebble.sendAppMessage({
@@ -130,20 +154,84 @@ function fetchEliqEffect() {
           console.log("Error");
         }
       }
-    };	  
-  }
+    };
+  }*/
 
+  req.send(null);
+}
+
+function fetchCurrentEffect() {
+  var response;
+  var req = new XMLHttpRequest();
+  var accesstoken="";
+  //var mode="";
+  var options = JSON.parse(window.localStorage.getItem('options'));
+  if (options === null) {
+    Pebble.sendAppMessage({"current":"--","forecast":"--"});
+    return;
+  } else {
+    if (options.accesstoken === null){
+      Pebble.sendAppMessage({"current":"--","forecast":"--"});
+      return;
+    } else {
+      accesstoken = options.accesstoken;	
+      //mode = options.mode;
+    }
+  }
+    req.open('GET', "https://my.eliq.se/api/datanow?accesstoken=" + accesstoken, true);
+    //console.log("Calling eliq datanow...");
+    req.onload = function(e) {
+      if (req.readyState == 4) {
+        if(req.status == 200 || req.status == 201) {
+          response = JSON.parse(req.responseText);
+
+          var current;
+          if (response) {
+            console.log(JSON.stringify(response));
+
+            current = response.power;
+            var diff = 0;
+
+            Pebble.sendAppMessage({
+              "current":current+"W",
+              "forecast":diff+"W"});
+          }
+        } else {
+          Pebble.sendAppMessage({
+              "current":"--",
+              "forecast":"--"});
+          console.log("Error");
+        }
+      }
+    };
+ 
   req.send(null);
 }
 
 Pebble.addEventListener("ready",
                         function(e) {
                           console.log("connect: " + e.type + ", ready:" + e.ready);
-                          fetchEliqEffect();
+                          getTemperature();
+					      var options = JSON.parse(window.localStorage.getItem('options'));
+						  var mode = options.mode;
+							if(mode=="forecast"){
+								fetchTodayEffect();
+							}else{
+								fetchCurrentEffect();
+							}
                         });
 
 Pebble.addEventListener("appmessage",
                         function(e) {
-                          console.log("message: " + e.type);
-                          fetchEliqEffect();
+                          console.log("message: " + JSON.stringify(e));
+							if(e.payload.temperaturerequest == 1) {
+								console.log("TEMPERATURE REQUEST");
+								getTemperature();
+							} else if (e.payload.forecastpower == 1) {
+								console.log("FORECAST REQUEST");
+								fetchTodayEffect();
+							} else if (e.payload.currentpower == 1) {
+								console.log("CURRENT REQUEST");
+								fetchCurrentEffect();
+							}                    
                         });
