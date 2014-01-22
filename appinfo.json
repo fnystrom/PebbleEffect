@@ -1,9 +1,10 @@
 {
-    "versionLabel": "1.7",
+    "versionLabel": "1.0",
     "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
     "appKeys": {
         "temperature": 6,
         "accesstoken": 4,
+        "tempmode": 10,
         "currentpower": 7,
         "forecast": 2,
         "current": 0,
@@ -14,7 +15,7 @@
         "forecastpower": 8
     },
     "longName": "EliqEffect",
-    "versionCode": 7,
+    "versionCode": 8,
     "capabilities": [
         "configurable"
     ],

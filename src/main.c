@@ -1,5 +1,4 @@
 #include "pebble.h"
-#include "mini-printf.h"
 	
 Window *window;
 
@@ -28,13 +27,14 @@ enum EffectKey {
 	EFFECT_TEMPERATURE_KEY = 6,
 	EFFECT_CURRENTPOWER_KEY = 7,
 	EFFECT_FORECASTPOWER_KEY = 8,
-	EFFECT_TEMPERATUREREQUEST_KEY = 9
+	EFFECT_TEMPERATUREREQUEST_KEY = 9,
+	EFFECT_TEMPERATUREMODE_KEY = 10
 };
 
 #define TEXT_JUST_NU "Just nu:"
 #define TEXT_HITTILLS "Idag:"
 #define TEXT_PROGNOS "Prognos:"
-#define TEXT_LADDAR "laddar..."
+#define TEXT_LADDAR "         "
 #define TEXT_TEMPERATUR "Temp:"
 
 static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
@@ -145,6 +145,21 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
 		  text_layer_set_text(text2_layer, "Diff:");
       }
       break;
+	
+	case EFFECT_TEMPERATUREMODE_KEY:
+	  if (strcmp(new_tuple->value->cstring, "show") == 0)
+      {
+		  persist_write_bool(EFFECT_TEMPERATUREMODE_KEY, true);
+		  layer_set_hidden((Layer *)text3_layer, false);
+		  layer_set_hidden((Layer *)temperature_layer, false);
+      }
+      else
+      {
+		  persist_write_bool(EFFECT_TEMPERATUREMODE_KEY, false);
+		  layer_set_hidden((Layer *)text3_layer, true);
+		  layer_set_hidden((Layer *)temperature_layer, true);
+      }
+      break;
 	  
 	case EFFECT_BACKGROUND_KEY:
       if (strcmp(new_tuple->value->cstring, "black") == 0)
@@ -192,7 +207,20 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
   strftime(minute_text, sizeof(minute_text), "%M", tick_time);
 
   if(strcmp(second_text, "05") == 0){
-    send_temperature_cmd();
+    if((strcmp(minute_text, "00") == 0)||
+	   (strcmp(minute_text, "05") == 0)||
+	   (strcmp(minute_text, "10") == 0)||
+	   (strcmp(minute_text, "15") == 0)||
+	   (strcmp(minute_text, "20") == 0)||
+	   (strcmp(minute_text, "25") == 0)||
+	   (strcmp(minute_text, "30") == 0)||
+	   (strcmp(minute_text, "35") == 0)||
+	   (strcmp(minute_text, "40") == 0)||
+	   (strcmp(minute_text, "45") == 0)||
+	   (strcmp(minute_text, "50") == 0)||
+	   (strcmp(minute_text, "55") == 0)){
+      send_temperature_cmd();
+    }
   }
 	   
   if(!forecast){
@@ -237,8 +265,11 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(upper_layer));
   text_layer_set_text(upper_layer, "00:00");
 	
-	
-  text3_layer = text_layer_create(GRect(0, 75, 72, 68));
+  //Testar FONT_KEY_GOTHIC_28_BOLD. Gamla FONT_KEY_GOTHIC_24_BOLD
+  int column = 65;
+  int titleoffset = 3;
+  int row1 = 115-30-30;
+  text3_layer = text_layer_create(GRect(0, row1+titleoffset, column, 68));
   text_layer_set_text_color(text3_layer, GColorWhite);
   text_layer_set_background_color(text3_layer, GColorClear);
   text_layer_set_font(text3_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
@@ -246,18 +277,16 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(text3_layer));
   text_layer_set_text(text3_layer, TEXT_TEMPERATUR);
 	
-  temperature_layer = text_layer_create(GRect(72, 75, 72, 68));
+  temperature_layer = text_layer_create(GRect(column, row1, 144-column, 68));
   text_layer_set_text_color(temperature_layer, GColorWhite);
   text_layer_set_background_color(temperature_layer, GColorClear);
-  //text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(temperature_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(temperature_layer));
-  text_layer_set_text(temperature_layer, "-23C");
+  //text_layer_set_text(temperature_layer, "-273C");
 	
-	
-  //text1_layer = text_layer_create(GRect(0, 50, 144, 68));
-  text1_layer = text_layer_create(GRect(0, 95, 72, 68));
+  int row2 = 115-30;
+  text1_layer = text_layer_create(GRect(0, row2+titleoffset, column, 68));
   text_layer_set_text_color(text1_layer, GColorWhite);
   text_layer_set_background_color(text1_layer, GColorClear);
   text_layer_set_font(text1_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
@@ -265,18 +294,16 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(text1_layer));
   text_layer_set_text(text1_layer, TEXT_HITTILLS);
 	
-  //current_power_layer = text_layer_create(GRect(0, 70, 144, 68));
-  current_power_layer = text_layer_create(GRect(72, 95, 72, 68));
+  current_power_layer = text_layer_create(GRect(column, row2, 144-column, 68));
   text_layer_set_text_color(current_power_layer, GColorWhite);
   text_layer_set_background_color(current_power_layer, GColorClear);
-  //text_layer_set_font(current_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_font(current_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_font(current_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(current_power_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(current_power_layer));
-
+  //text_layer_set_text(current_power_layer, "99999kWh");
 	
-  //text2_layer = text_layer_create(GRect(0, 95, 144, 68));
-  text2_layer = text_layer_create(GRect(0, 115, 72, 68));
+  int row3 = 115;
+  text2_layer = text_layer_create(GRect(0, row3+titleoffset, column, 68));
   text_layer_set_text_color(text2_layer, GColorWhite);
   text_layer_set_background_color(text2_layer, GColorClear);
   text_layer_set_font(text2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
@@ -284,14 +311,13 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(text2_layer));
   text_layer_set_text(text2_layer, TEXT_PROGNOS);
 	
-  estimate_power_layer = text_layer_create(GRect(72, 115, 72, 68));
+  estimate_power_layer = text_layer_create(GRect(column, row3, 144-column, 68));
   text_layer_set_text_color(estimate_power_layer, GColorWhite);
   text_layer_set_background_color(estimate_power_layer, GColorClear);	
-  //text_layer_set_font(estimate_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_font(estimate_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_font(estimate_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(estimate_power_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(estimate_power_layer));
-
+  //text_layer_set_text(estimate_power_layer, "+99999kWh");
 	
   connection_layer = text_layer_create(GRect(0, 145, 72, 34));
   text_layer_set_text_color(connection_layer, GColorWhite);
@@ -326,12 +352,19 @@ static void window_load(Window *window) {
 	s_forecast = "forecast";
   }
 	
+  bool tempmode = persist_read_bool(EFFECT_TEMPERATUREMODE_KEY);
+  char *s_tempmode = "hide";
+  if(tempmode){
+	s_tempmode = "show";
+  }
+	
   Tuplet initial_values[] = {
     TupletCString(EFFECT_CURRENT_KEY, TEXT_LADDAR),
     TupletCString(EFFECT_FORECAST_KEY, TEXT_LADDAR),
 	TupletCString(EFFECT_BACKGROUND_KEY, string),
 	TupletCString(EFFECT_MODE_KEY, s_forecast),
-	TupletCString(EFFECT_TEMPERATURE_KEY, "     ")
+	TupletCString(EFFECT_TEMPERATURE_KEY, "     "),
+	TupletCString(EFFECT_TEMPERATUREMODE_KEY, s_tempmode)
   };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),

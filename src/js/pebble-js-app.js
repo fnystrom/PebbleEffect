@@ -13,7 +13,7 @@ Pebble.addEventListener("showConfiguration", function() {
     if (options === null) {
         uri = 'http://effektprognos.azurewebsites.net/eliqeffekt.html';
     } else {
-        uri = 'http://effektprognos.azurewebsites.net/eliqeffekt.html?' + 'accesstoken=' + encodeURIComponent(options.accesstoken)+ '&background=' + encodeURIComponent(options.background)+ '&mode=' + encodeURIComponent(options.mode)+ '&temport=' + encodeURIComponent(options.temport);
+        uri = 'http://effektprognos.azurewebsites.net/eliqeffekt.html?' + 'accesstoken=' + encodeURIComponent(options.accesstoken)+ '&background=' + encodeURIComponent(options.background)+ '&mode=' + encodeURIComponent(options.mode)+ '&temport=' + encodeURIComponent(options.temport)+ '&temperature=' + encodeURIComponent(options.temperature);
     }
     Pebble.openURL(uri);
 });
@@ -22,9 +22,9 @@ Pebble.addEventListener("webviewclosed", function(e) {
     if (e.response !== '') {
         var options = JSON.parse(decodeURIComponent(e.response));
         window.localStorage.setItem('options', JSON.stringify(options));
-		var background = {'background':options.background,'mode':options.mode};
-        
-		Pebble.sendAppMessage(background, appMessageAck, appMessageNack);
+		var watchoptions = {'background':options.background,'mode':options.mode,'tempmode':options.temperature};
+        //Pebble.showSimpleNotificationOnPebble("options", JSON.stringify(watchoptions));
+		Pebble.sendAppMessage(watchoptions, appMessageAck, appMessageNack);
     } else {
         //console.log("no options received");
     }
