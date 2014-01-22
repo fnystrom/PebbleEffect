@@ -53,7 +53,7 @@ function getTemperature(){
       Pebble.sendAppMessage({"temperature":"--\u00B0C"});
       return;
     } else {
-      temport = options.temport;	
+      temport = options.temport.toLowerCase();
     }
   }
 
