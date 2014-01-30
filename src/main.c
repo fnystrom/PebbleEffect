@@ -4,9 +4,11 @@ Window *window;
 
 TextLayer *current_power_layer;
 TextLayer *estimate_power_layer;
+TextLayer *momentan_layer;
 TextLayer *text1_layer;
 TextLayer *text2_layer;
 TextLayer *text3_layer;
+TextLayer *text4_layer;
 TextLayer *connection_layer;
 TextLayer *temperature_layer;
 TextLayer *battery_layer;
@@ -23,12 +25,12 @@ enum EffectKey {
     EFFECT_ESTIMATE_KEY = 1,
 	EFFECT_FORECAST_KEY = 2,
 	EFFECT_BACKGROUND_KEY = 3,
-	EFFECT_MODE_KEY = 5,
 	EFFECT_TEMPERATURE_KEY = 6,
 	EFFECT_CURRENTPOWER_KEY = 7,
 	EFFECT_FORECASTPOWER_KEY = 8,
 	EFFECT_TEMPERATUREREQUEST_KEY = 9,
-	EFFECT_TEMPERATUREMODE_KEY = 10
+	EFFECT_TEMPERATUREMODE_KEY = 10,
+	EFFECT_JUSTNU_KEY = 11
 };
 
 #define TEXT_JUST_NU "Just nu:"
@@ -101,62 +103,33 @@ static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tup
   switch (key) {
 	case EFFECT_CURRENT_KEY:
       text_layer_set_text(current_power_layer, new_tuple->value->cstring);
-	  
-	  if(!persist_read_bool(EFFECT_MODE_KEY)){
-        int currentpower = atoi(new_tuple->value->cstring);
-		int diff = currentpower - previouspower;
-		previouspower = currentpower;
-  	    static char str[15];
-        
-		if(diff > 0){
-		  snprintf(str, sizeof(str), "+%dW", diff);
-		} else {
-		  snprintf(str, sizeof(str), "%dW", diff);
-        }
-		text_layer_set_text(estimate_power_layer, str);
-	  }
       break;
 
+	case EFFECT_JUSTNU_KEY:
+      text_layer_set_text(momentan_layer, new_tuple->value->cstring);
+      break;
+	  
 	case EFFECT_TEMPERATURE_KEY:
       text_layer_set_text(temperature_layer, new_tuple->value->cstring);
       break;
 
 	case EFFECT_FORECAST_KEY:
-	  if(persist_read_bool(EFFECT_MODE_KEY)){
+	  //if(persist_read_bool(EFFECT_MODE_KEY)){
         text_layer_set_text(estimate_power_layer, new_tuple->value->cstring);
-	  }
+	  //}
       break;
 	  
-	case EFFECT_MODE_KEY:
-	  if (strcmp(new_tuple->value->cstring, "forecast") == 0)
-      {
-		  if (!persist_read_bool(EFFECT_MODE_KEY)){send_forecast_cmd();}
-          persist_write_bool(EFFECT_MODE_KEY, true);
-		  text_layer_set_text(text1_layer, TEXT_HITTILLS);
-		  text_layer_set_text(text2_layer, TEXT_PROGNOS);
-		  previouspower = 0;
-      }
-      else
-      {
-          if (persist_read_bool(EFFECT_MODE_KEY)){send_current_cmd();}
-		  persist_write_bool(EFFECT_MODE_KEY, false);
-		  text_layer_set_text(text1_layer, TEXT_JUST_NU);
-		  text_layer_set_text(text2_layer, "");
-		  text_layer_set_text(text2_layer, "Diff:");
-      }
-      break;
-	
 	case EFFECT_TEMPERATUREMODE_KEY:
 	  if (strcmp(new_tuple->value->cstring, "show") == 0)
       {
 		  persist_write_bool(EFFECT_TEMPERATUREMODE_KEY, true);
-		  layer_set_hidden((Layer *)text3_layer, false);
+		  layer_set_hidden((Layer *)text4_layer, false);
 		  layer_set_hidden((Layer *)temperature_layer, false);
       }
       else
       {
 		  persist_write_bool(EFFECT_TEMPERATUREMODE_KEY, false);
-		  layer_set_hidden((Layer *)text3_layer, true);
+		  layer_set_hidden((Layer *)text4_layer, true);
 		  layer_set_hidden((Layer *)temperature_layer, true);
       }
       break;
@@ -191,8 +164,6 @@ static void handle_battery(BatteryChargeState charge_state) {
 }
 
 static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
-  bool forecast = persist_read_bool(EFFECT_MODE_KEY);
-  
   static char time_text[] = "00:00";
 
   strftime(time_text, sizeof(time_text), "%R", tick_time);
@@ -223,14 +194,13 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
     }
   }
 	   
-  if(!forecast){
     if(strcmp(second_text, "00") == 0 ||
 	   strcmp(second_text, "15") == 0 ||
 	   strcmp(second_text, "30") == 0 ||
 	   strcmp(second_text, "45") == 0){
         send_current_cmd();
 	  }		
-  } else if(forecast && strcmp(second_text, "00") == 0){
+  if(strcmp(second_text, "00") == 0){
     if ((strcmp(minute_text, "30") == 0) ||
 	    (strcmp(minute_text, "31") == 0) ||
 	    (strcmp(minute_text, "32") == 0) ||
@@ -254,85 +224,44 @@ static void handle_bluetooth(bool connected) {
   text_layer_set_text(connection_layer, connected ? "ansluten" : "ej ansluten");
 }
 
+static TextLayer* createTextLayer(GRect rect, GFont font, GTextAlignment text_alignment, const char * text){
+  Layer *window_layer = window_get_root_layer(window);
+  
+  TextLayer* layer = text_layer_create(rect);
+  text_layer_set_text_color(layer, GColorWhite);
+  text_layer_set_background_color(layer, GColorClear);
+  text_layer_set_font(layer, font);
+  text_layer_set_text_alignment(layer, text_alignment);
+  layer_add_child(window_layer, text_layer_get_layer(layer));
+  text_layer_set_text(layer, text);
+  
+  return layer;
+}
+
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
 
-  upper_layer = text_layer_create(GRect(0, 0, 144, 68));
-  text_layer_set_text_color(upper_layer, GColorWhite);
-  text_layer_set_background_color(upper_layer, GColorClear);
-  text_layer_set_font(upper_layer, fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49));
-  text_layer_set_text_alignment(upper_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(upper_layer));
-  text_layer_set_text(upper_layer, "00:00");
+  upper_layer = createTextLayer(GRect(0, 0, 144, 68), fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49), GTextAlignmentCenter, "00:00");
 	
   //Testar FONT_KEY_GOTHIC_28_BOLD. Gamla FONT_KEY_GOTHIC_24_BOLD
   int column = 65;
   int titleoffset = 3;
-  int row1 = 115-30-30;
-  text3_layer = text_layer_create(GRect(0, row1+titleoffset, column, 68));
-  text_layer_set_text_color(text3_layer, GColorWhite);
-  text_layer_set_background_color(text3_layer, GColorClear);
-  text_layer_set_font(text3_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(text3_layer, GTextAlignmentLeft);
-  layer_add_child(window_layer, text_layer_get_layer(text3_layer));
-  text_layer_set_text(text3_layer, TEXT_TEMPERATUR);
-	
-  temperature_layer = text_layer_create(GRect(column, row1, 144-column, 68));
-  text_layer_set_text_color(temperature_layer, GColorWhite);
-  text_layer_set_background_color(temperature_layer, GColorClear);
-  text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(temperature_layer, GTextAlignmentRight);
-  layer_add_child(window_layer, text_layer_get_layer(temperature_layer));
-  //text_layer_set_text(temperature_layer, "-273C");
-	
-  int row2 = 115-30;
-  text1_layer = text_layer_create(GRect(0, row2+titleoffset, column, 68));
-  text_layer_set_text_color(text1_layer, GColorWhite);
-  text_layer_set_background_color(text1_layer, GColorClear);
-  text_layer_set_font(text1_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(text1_layer, GTextAlignmentLeft);
-  layer_add_child(window_layer, text_layer_get_layer(text1_layer));
-  text_layer_set_text(text1_layer, TEXT_HITTILLS);
-	
-  current_power_layer = text_layer_create(GRect(column, row2, 144-column, 68));
-  text_layer_set_text_color(current_power_layer, GColorWhite);
-  text_layer_set_background_color(current_power_layer, GColorClear);
-  text_layer_set_font(current_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(current_power_layer, GTextAlignmentRight);
-  layer_add_child(window_layer, text_layer_get_layer(current_power_layer));
-  //text_layer_set_text(current_power_layer, "99999kWh");
-	
-  int row3 = 115;
-  text2_layer = text_layer_create(GRect(0, row3+titleoffset, column, 68));
-  text_layer_set_text_color(text2_layer, GColorWhite);
-  text_layer_set_background_color(text2_layer, GColorClear);
-  text_layer_set_font(text2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(text2_layer, GTextAlignmentLeft);
-  layer_add_child(window_layer, text_layer_get_layer(text2_layer));
-  text_layer_set_text(text2_layer, TEXT_PROGNOS);
-	
-  estimate_power_layer = text_layer_create(GRect(column, row3, 144-column, 68));
-  text_layer_set_text_color(estimate_power_layer, GColorWhite);
-  text_layer_set_background_color(estimate_power_layer, GColorClear);	
-  text_layer_set_font(estimate_power_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(estimate_power_layer, GTextAlignmentRight);
-  layer_add_child(window_layer, text_layer_get_layer(estimate_power_layer));
-  //text_layer_set_text(estimate_power_layer, "+99999kWh");
-	
-  connection_layer = text_layer_create(GRect(0, 145, 72, 34));
-  text_layer_set_text_color(connection_layer, GColorWhite);
-  text_layer_set_background_color(connection_layer, GColorClear);
-  text_layer_set_font(connection_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-  text_layer_set_text_alignment(connection_layer, GTextAlignmentLeft);
-  layer_add_child(window_layer, text_layer_get_layer(connection_layer));
-
-  battery_layer = text_layer_create(GRect(72, 145, 72, 34));
-  text_layer_set_text_color(battery_layer, GColorWhite);
-  text_layer_set_background_color(battery_layer, GColorClear);
-  text_layer_set_font(battery_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-  text_layer_set_text_alignment(battery_layer, GTextAlignmentRight);
-  layer_add_child(window_layer, text_layer_get_layer(battery_layer));
-
+  int rowspace = 24;
+  int bottomline = 119;
+  int row0 = bottomline - 3 * rowspace;
+  int row1 = bottomline - 2 * rowspace;
+  int row2 = bottomline - rowspace;
+  int row3 = bottomline;
+  text4_layer = createTextLayer(GRect(0, row0+titleoffset, column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentLeft, TEXT_TEMPERATUR);
+  temperature_layer = createTextLayer(GRect(column, row0, 144-column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), GTextAlignmentRight, "");
+  text3_layer = createTextLayer(GRect(0, row1+titleoffset, column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentLeft, TEXT_JUST_NU);
+  momentan_layer = createTextLayer(GRect(column, row1, 144-column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), GTextAlignmentRight, "");
+  text1_layer = createTextLayer(GRect(0, row2+titleoffset, column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentLeft, TEXT_HITTILLS);
+  current_power_layer = createTextLayer(GRect(column, row2, 144-column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), GTextAlignmentRight, "");
+  text2_layer = createTextLayer(GRect(0, row3+titleoffset, column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentLeft, TEXT_PROGNOS);
+  estimate_power_layer = createTextLayer(GRect(column, row3, 144-column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), GTextAlignmentRight, "");
+  connection_layer = createTextLayer(GRect(0, 145, 72, 34), fonts_get_system_font(FONT_KEY_GOTHIC_18), GTextAlignmentLeft, "");
+  battery_layer = createTextLayer(GRect(72, 145, 72, 34), fonts_get_system_font(FONT_KEY_GOTHIC_18), GTextAlignmentRight, "");
   inverter_layer = inverter_layer_create(GRect(0, 0, 144, 168));
   
   handle_bluetooth(bluetooth_connection_service_peek());
@@ -345,13 +274,7 @@ static void window_load(Window *window) {
   if(inv){
 	  string = "white";
   }
-  
-  bool forecast = persist_read_bool(EFFECT_MODE_KEY);
-  char *s_forecast = "now";
-  if(forecast){
-	s_forecast = "forecast";
-  }
-	
+  	
   bool tempmode = persist_read_bool(EFFECT_TEMPERATUREMODE_KEY);
   char *s_tempmode = "hide";
   if(tempmode){
@@ -362,9 +285,9 @@ static void window_load(Window *window) {
     TupletCString(EFFECT_CURRENT_KEY, TEXT_LADDAR),
     TupletCString(EFFECT_FORECAST_KEY, TEXT_LADDAR),
 	TupletCString(EFFECT_BACKGROUND_KEY, string),
-	TupletCString(EFFECT_MODE_KEY, s_forecast),
 	TupletCString(EFFECT_TEMPERATURE_KEY, "     "),
-	TupletCString(EFFECT_TEMPERATUREMODE_KEY, s_tempmode)
+	TupletCString(EFFECT_TEMPERATUREMODE_KEY, s_tempmode),
+	TupletCString(EFFECT_JUSTNU_KEY, TEXT_LADDAR)
   };
 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
@@ -388,9 +311,11 @@ static void window_unload(Window *window) {
   text_layer_destroy(upper_layer);
   text_layer_destroy(current_power_layer);
   text_layer_destroy(estimate_power_layer);
+  text_layer_destroy(momentan_layer);
   text_layer_destroy(text1_layer);
   text_layer_destroy(text2_layer);
   text_layer_destroy(text3_layer);
+  text_layer_destroy(text4_layer);
   text_layer_destroy(temperature_layer);
   text_layer_destroy(connection_layer);
   text_layer_destroy(battery_layer);
