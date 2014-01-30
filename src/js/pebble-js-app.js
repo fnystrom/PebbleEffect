@@ -179,14 +179,9 @@ Pebble.addEventListener("ready",
                         function(e) {
                           //console.log("connect: " + e.type + ", ready:" + e.ready);
                           getTemperature();
-
-							var options = JSON.parse(window.localStorage.getItem('options'));
-						  var mode = options.mode;
-							if(mode=="forecast"){
-								fetchTodayEffect();
-							}else{
-								fetchCurrentEffect();
-							}
+                          fetchTodayEffect();
+  						  fetchCurrentEffect();
+							
                         });
 
 Pebble.addEventListener("appmessage",

@@ -1,5 +1,5 @@
 {
-    "versionLabel": "1.0.2",
+    "versionLabel": "1.0.3",
     "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
     "appKeys": {
         "temperature": 6,
@@ -15,7 +15,7 @@
         "forecastpower": 8
     },
     "longName": "EliqEffect",
-    "versionCode": 10,
+    "versionCode": 11,
     "capabilities": [
         "configurable"
     ],
