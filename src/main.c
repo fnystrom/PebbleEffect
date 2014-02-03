@@ -18,8 +18,6 @@ InverterLayer *inverter_layer;
 static AppSync sync;
 static uint8_t sync_buffer[128];
 
-static int previouspower = 0;
-
 enum EffectKey {
     EFFECT_CURRENT_KEY = 0,
     EFFECT_ESTIMATE_KEY = 1,
@@ -178,43 +176,28 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
   strftime(minute_text, sizeof(minute_text), "%M", tick_time);
 
   if(strcmp(second_text, "05") == 0){
-    if((strcmp(minute_text, "00") == 0)||
-	   (strcmp(minute_text, "05") == 0)||
-	   (strcmp(minute_text, "10") == 0)||
-	   (strcmp(minute_text, "15") == 0)||
-	   (strcmp(minute_text, "20") == 0)||
-	   (strcmp(minute_text, "25") == 0)||
-	   (strcmp(minute_text, "30") == 0)||
-	   (strcmp(minute_text, "35") == 0)||
-	   (strcmp(minute_text, "40") == 0)||
-	   (strcmp(minute_text, "45") == 0)||
-	   (strcmp(minute_text, "50") == 0)||
-	   (strcmp(minute_text, "55") == 0)){
-      send_temperature_cmd();
-    }
+    send_temperature_cmd();
   }
 	   
-    if(strcmp(second_text, "00") == 0 ||
-	   strcmp(second_text, "15") == 0 ||
-	   strcmp(second_text, "30") == 0 ||
-	   strcmp(second_text, "45") == 0){
-        send_current_cmd();
-	  }		
-  if(strcmp(second_text, "00") == 0){
-    if ((strcmp(minute_text, "30") == 0) ||
-	    (strcmp(minute_text, "31") == 0) ||
-	    (strcmp(minute_text, "32") == 0) ||
-	    (strcmp(minute_text, "33") == 0) ||
-	    (strcmp(minute_text, "34") == 0) ||
-	    (strcmp(minute_text, "35") == 0) ||
-	    (strcmp(minute_text, "40") == 0) ||
-	    (strcmp(minute_text, "50") == 0) ||
-  	    (strcmp(minute_text, "00") == 0) ||
-	    (strcmp(minute_text, "10") == 0) ||
-	    (strcmp(minute_text, "20") == 0))
-    {
-      send_forecast_cmd();
-    }
+  if(strcmp(second_text, "01") == 0 ||
+     strcmp(second_text, "16") == 0 ||
+	 strcmp(second_text, "31") == 0 ||
+	 strcmp(second_text, "46") == 0) {
+    send_current_cmd();
+  }
+	
+  if(strcmp(second_text, "00") == 0 && ((strcmp(minute_text, "30") == 0) ||
+	                                    (strcmp(minute_text, "31") == 0) ||
+	                                    (strcmp(minute_text, "32") == 0) ||
+	                                    (strcmp(minute_text, "33") == 0) ||
+	                                    (strcmp(minute_text, "34") == 0) ||
+	                                    (strcmp(minute_text, "35") == 0) ||
+	                                    (strcmp(minute_text, "40") == 0) ||
+	                                    (strcmp(minute_text, "50") == 0) ||
+  	                                    (strcmp(minute_text, "00") == 0) ||
+	                                    (strcmp(minute_text, "10") == 0) ||
+	                                    (strcmp(minute_text, "20") == 0))) {
+    send_forecast_cmd();
   }
 	
   handle_battery(battery_state_service_peek());
@@ -239,11 +222,6 @@ static TextLayer* createTextLayer(GRect rect, GFont font, GTextAlignment text_al
 }
 
 static void window_load(Window *window) {
-  Layer *window_layer = window_get_root_layer(window);
-
-  upper_layer = createTextLayer(GRect(0, 0, 144, 68), fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49), GTextAlignmentCenter, "00:00");
-	
-  //Testar FONT_KEY_GOTHIC_28_BOLD. Gamla FONT_KEY_GOTHIC_24_BOLD
   int column = 65;
   int titleoffset = 3;
   int rowspace = 24;
@@ -252,6 +230,8 @@ static void window_load(Window *window) {
   int row1 = bottomline - 2 * rowspace;
   int row2 = bottomline - rowspace;
   int row3 = bottomline;
+
+  upper_layer = createTextLayer(GRect(0, 0, 144, 68), fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49), GTextAlignmentCenter, "00:00");
   text4_layer = createTextLayer(GRect(0, row0+titleoffset, column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentLeft, TEXT_TEMPERATUR);
   temperature_layer = createTextLayer(GRect(column, row0, 144-column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), GTextAlignmentRight, "");
   text3_layer = createTextLayer(GRect(0, row1+titleoffset, column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentLeft, TEXT_JUST_NU);

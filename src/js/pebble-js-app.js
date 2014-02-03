@@ -1,9 +1,9 @@
 function appMessageAck(e) {
-    console.log("options sent to Pebble successfully");
+    //console.log("options sent to Pebble successfully");
 }
 
 function appMessageNack(e) {
-    console.log("options not sent to Pebble: " + e.error.message);
+    //console.log("options not sent to Pebble: " + e.error.message);
 }
 
 Pebble.addEventListener("showConfiguration", function() {
@@ -24,10 +24,10 @@ Pebble.addEventListener("webviewclosed", function(e) {
         window.localStorage.setItem('options', JSON.stringify(options));
 		var watchoptions = {'background':options.background,'tempmode':options.temperature};
         //Pebble.showSimpleNotificationOnPebble("options", JSON.stringify(watchoptions));
-		console.log(JSON.stringify(watchoptions));
+		//console.log(JSON.stringify(watchoptions));
 		Pebble.sendAppMessage(watchoptions, appMessageAck, appMessageNack);
     } else {
-        console.log("no options received");
+        //console.log("no options received");
     }
 });
 
@@ -43,7 +43,7 @@ function today(){
 }
 
 function getTemperature(){
-  console.log("getTemperature");
+  //console.log("getTemperature");
   var response = "-1";
   var temport="";
   var options = JSON.parse(window.localStorage.getItem('options'));
@@ -67,7 +67,7 @@ function getTemperature(){
     if (request.readyState == 4) {
       if(request.status == 200 || request.status == 201) {
         response = parseFloat(request.responseText);
-        console.log(response);
+        //console.log(response);
 		Pebble.sendAppMessage({"temperature":response + "\u00B0C"});
       }
     }
@@ -79,7 +79,7 @@ function getTemperature(){
 }
 
 function fetchTodayEffect() {
-  console.log("fetchTodayEffect");
+  //console.log("fetchTodayEffect");
   var response;
   var req = new XMLHttpRequest();
   var accesstoken="";
@@ -104,7 +104,7 @@ function fetchTodayEffect() {
 
           var current, estimate;
           if (response) {
-			console.log(JSON.stringify(response));
+			//console.log(JSON.stringify(response));
             var hourCount = response.data.length;
             var totalEnergy=0;
 			
@@ -125,7 +125,7 @@ function fetchTodayEffect() {
           Pebble.sendAppMessage({
               "current":"--",
               "forecast":"--"});
-          console.log("Error");
+          //console.log("Error");
         }
       }
     };
@@ -134,7 +134,7 @@ function fetchTodayEffect() {
 }
 
 function fetchCurrentEffect() {
-  console.log("fetchCurrentEffect");
+  //console.log("fetchCurrentEffect");
   var response;
   var req = new XMLHttpRequest();
   var accesstoken="";
@@ -158,7 +158,7 @@ function fetchCurrentEffect() {
 
           var current;
           if (response) {
-            console.log(JSON.stringify(response));
+            //console.log(JSON.stringify(response));
 
             current = response.power;
             
@@ -167,7 +167,7 @@ function fetchCurrentEffect() {
         } else {
           Pebble.sendAppMessage({
               "justnu":"--"});
-          console.log("Error");
+          //console.log("Error");
         }
       }
     };
