@@ -1,5 +1,7 @@
 #include "pebble.h"
-	
+
+static void send_monthforecast_cmd(void);
+
 Window *window;
 
 TextLayer *current_power_layer;
@@ -15,12 +17,18 @@ TextLayer *battery_layer;
 TextLayer *upper_layer;
 InverterLayer *inverter_layer;
 
+TextLayer *text5_layer;
+TextLayer *text6_layer;
+TextLayer *so_far_layer;
+TextLayer *estimate_month_layer;
+
 static AppSync sync;
 static uint8_t sync_buffer[128];
+//static int flickMode;
 
 enum EffectKey {
-    EFFECT_CURRENT_KEY = 0,
-    EFFECT_ESTIMATE_KEY = 1,
+  //EFFECT_CURRENT_KEY = 0,
+  EFFECT_ESTIMATE_KEY = 1,
 	EFFECT_FORECAST_KEY = 2,
 	EFFECT_BACKGROUND_KEY = 3,
 	EFFECT_TEMPERATURE_KEY = 6,
@@ -28,7 +36,12 @@ enum EffectKey {
 	EFFECT_FORECASTPOWER_KEY = 8,
 	EFFECT_TEMPERATUREREQUEST_KEY = 9,
 	EFFECT_TEMPERATUREMODE_KEY = 10,
-	EFFECT_JUSTNU_KEY = 11
+	EFFECT_JUSTNU_KEY = 11,
+	EFFECT_TOTALTIDAG_KEY = 12,
+	EFFECT_FLICKMODE_KEY = 13,
+  EFFECT_MONTHFORECASTPOWER_KEY = 14,
+  EFFECT_SOFAR_KEY = 15,
+  EFFECT_MONTHFORECAST_KEY = 16
 };
 
 #define TEXT_JUST_NU "Just nu:"
@@ -36,6 +49,48 @@ enum EffectKey {
 #define TEXT_PROGNOS "Prognos:"
 #define TEXT_LADDAR "         "
 #define TEXT_TEMPERATUR "Temp:"
+#define MANADSPROGNOS "Månadsprognos"
+#define HITTILLS "Hittills:"
+
+#define DAY_VIEW 0
+#define MONTH_VIEW 1
+	
+static void tap_handler(AccelAxisType axis, int32_t direction) {
+  int flickMode = persist_read_int(EFFECT_FLICKMODE_KEY);
+	  
+  if (flickMode == DAY_VIEW) {
+    flickMode = MONTH_VIEW;
+	  
+	  layer_set_hidden((Layer *)text1_layer, true);
+	  layer_set_hidden((Layer *)text3_layer, true);
+	  layer_set_hidden((Layer *)current_power_layer, true);
+	  layer_set_hidden((Layer *)estimate_power_layer, true);
+	  layer_set_hidden((Layer *)momentan_layer, true);
+
+    layer_set_hidden((Layer *)text5_layer, false);
+    layer_set_hidden((Layer *)text6_layer, false);
+    layer_set_hidden((Layer *)so_far_layer, false);
+    layer_set_hidden((Layer *)estimate_month_layer, false);
+    
+    // Skicka order om att hämta månadsprognos
+    send_monthforecast_cmd();
+  } else if (flickMode == MONTH_VIEW) {
+    flickMode = DAY_VIEW;
+
+    layer_set_hidden((Layer *)text1_layer, false);
+    layer_set_hidden((Layer *)text3_layer, false);
+    layer_set_hidden((Layer *)current_power_layer, false);
+    layer_set_hidden((Layer *)estimate_power_layer, false);
+	  layer_set_hidden((Layer *)momentan_layer, false);
+
+    layer_set_hidden((Layer *)text5_layer, true);
+    layer_set_hidden((Layer *)text6_layer, true);
+    layer_set_hidden((Layer *)so_far_layer, true);
+    layer_set_hidden((Layer *)estimate_month_layer, true);
+  }
+
+  persist_write_int(EFFECT_FLICKMODE_KEY, flickMode);
+}
 
 static void sync_error_callback(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "App Message Sync Error: %d", app_message_error);
@@ -95,57 +150,67 @@ static void send_current_cmd(void) {
   send_cmd(EFFECT_CURRENTPOWER_KEY);
 }
 
+static void send_monthforecast_cmd(void) {
+  send_cmd(EFFECT_MONTHFORECASTPOWER_KEY);
+}
+
 static void sync_tuple_changed_callback(const uint32_t key, const Tuple* new_tuple, const Tuple* old_tuple, void* context) {
   //APP_LOG(APP_LOG_LEVEL_DEBUG, "tuple: %d, %s", (int)key, new_tuple->value->cstring);
 
+  int flickMode;
+
   switch (key) {
-	case EFFECT_CURRENT_KEY:
+  	case EFFECT_TOTALTIDAG_KEY:
       text_layer_set_text(current_power_layer, new_tuple->value->cstring);
       break;
 
-	case EFFECT_JUSTNU_KEY:
+	  case EFFECT_JUSTNU_KEY:
       text_layer_set_text(momentan_layer, new_tuple->value->cstring);
       break;
 	  
-	case EFFECT_TEMPERATURE_KEY:
+	  case EFFECT_TEMPERATURE_KEY:
       text_layer_set_text(temperature_layer, new_tuple->value->cstring);
       break;
 
-	case EFFECT_FORECAST_KEY:
-	  //if(persist_read_bool(EFFECT_MODE_KEY)){
-        text_layer_set_text(estimate_power_layer, new_tuple->value->cstring);
-	  //}
+	  case EFFECT_FORECAST_KEY:
+      text_layer_set_text(estimate_power_layer, new_tuple->value->cstring);
+      break;
+    
+    case EFFECT_SOFAR_KEY:
+      text_layer_set_text(so_far_layer, new_tuple->value->cstring);
+      break;
+    
+    case EFFECT_MONTHFORECAST_KEY:
+      text_layer_set_text(estimate_month_layer, new_tuple->value->cstring);
       break;
 	  
-	case EFFECT_TEMPERATUREMODE_KEY:
-	  if (strcmp(new_tuple->value->cstring, "show") == 0)
-      {
-		  persist_write_bool(EFFECT_TEMPERATUREMODE_KEY, true);
-		  layer_set_hidden((Layer *)text4_layer, false);
-		  layer_set_hidden((Layer *)temperature_layer, false);
-      }
-      else
-      {
-		  persist_write_bool(EFFECT_TEMPERATUREMODE_KEY, false);
-		  layer_set_hidden((Layer *)text4_layer, true);
-		  layer_set_hidden((Layer *)temperature_layer, true);
+	  case EFFECT_TEMPERATUREMODE_KEY:
+      flickMode = persist_read_int(EFFECT_FLICKMODE_KEY);
+      
+	    if (flickMode == DAY_VIEW) {
+        if (strcmp(new_tuple->value->cstring, "show") == 0) {
+  		    persist_write_bool(EFFECT_TEMPERATUREMODE_KEY, true);
+  		    layer_set_hidden((Layer *)text4_layer, false);
+  		    layer_set_hidden((Layer *)temperature_layer, false);
+        } else {
+		      persist_write_bool(EFFECT_TEMPERATUREMODE_KEY, false);
+		      layer_set_hidden((Layer *)text4_layer, true);
+		      layer_set_hidden((Layer *)temperature_layer, true);
+        } 
       }
       break;
 	  
-	case EFFECT_BACKGROUND_KEY:
-      if (strcmp(new_tuple->value->cstring, "black") == 0)
-      {
+	  case EFFECT_BACKGROUND_KEY:
+      if (strcmp(new_tuple->value->cstring, "black") == 0) {
           persist_write_bool(EFFECT_BACKGROUND_KEY, false);
-      }
-      else
-      {
+      } else {
           persist_write_bool(EFFECT_BACKGROUND_KEY, true);
       }
-	  update_configuration();
+  	  update_configuration();
       break;
 	  
   	default:
-	  //APP_LOG(APP_LOG_LEVEL_DEBUG, "default");
+  	  //APP_LOG(APP_LOG_LEVEL_DEBUG, "default");
 	  break;	
   }
 }
@@ -181,9 +246,9 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
 	   
   if(strcmp(second_text, "01") == 0 ||
      strcmp(second_text, "16") == 0 ||
-	 strcmp(second_text, "31") == 0 ||
-	 strcmp(second_text, "46") == 0) {
-    send_current_cmd();
+  	 strcmp(second_text, "31") == 0 ||
+	   strcmp(second_text, "46") == 0) {
+     send_current_cmd();
   }
 	
   if(strcmp(second_text, "00") == 0 && ((strcmp(minute_text, "30") == 0) ||
@@ -194,7 +259,7 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
 	                                    (strcmp(minute_text, "35") == 0) ||
 	                                    (strcmp(minute_text, "40") == 0) ||
 	                                    (strcmp(minute_text, "50") == 0) ||
-  	                                    (strcmp(minute_text, "00") == 0) ||
+  	                                  (strcmp(minute_text, "00") == 0) ||
 	                                    (strcmp(minute_text, "10") == 0) ||
 	                                    (strcmp(minute_text, "20") == 0))) {
     send_forecast_cmd();
@@ -231,6 +296,8 @@ static void window_load(Window *window) {
   int row2 = bottomline - rowspace;
   int row3 = bottomline;
 
+  persist_write_int(EFFECT_FLICKMODE_KEY, DAY_VIEW);
+	
   upper_layer = createTextLayer(GRect(0, 0, 144, 68), fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49), GTextAlignmentCenter, "00:00");
   text4_layer = createTextLayer(GRect(0, row0+titleoffset, column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentLeft, TEXT_TEMPERATUR);
   temperature_layer = createTextLayer(GRect(column, row0, 144-column, 68), fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), GTextAlignmentRight, "");
@@ -243,7 +310,17 @@ static void window_load(Window *window) {
   connection_layer = createTextLayer(GRect(0, 145, 72, 34), fonts_get_system_font(FONT_KEY_GOTHIC_18), GTextAlignmentLeft, "");
   battery_layer = createTextLayer(GRect(72, 145, 72, 34), fonts_get_system_font(FONT_KEY_GOTHIC_18), GTextAlignmentRight, "");
   inverter_layer = inverter_layer_create(GRect(0, 0, 144, 168));
-  
+
+  text5_layer = createTextLayer(GRect(0, row1, 144, 35), fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), GTextAlignmentLeft, MANADSPROGNOS);
+  text6_layer = createTextLayer(GRect(0, row2+titleoffset, column, 35), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentLeft, HITTILLS);
+  so_far_layer = createTextLayer(GRect(column-20, row2+titleoffset, 144-column+20, 35), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentRight, "9999kWh");
+  estimate_month_layer = createTextLayer(GRect(column-20, row3+titleoffset, 144-column+20, 35), fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentRight, "9999kWh");
+
+  layer_set_hidden((Layer *)text5_layer, true);
+  layer_set_hidden((Layer *)text6_layer, true);
+  layer_set_hidden((Layer *)so_far_layer, true);
+  layer_set_hidden((Layer *)estimate_month_layer, true);
+
   handle_bluetooth(bluetooth_connection_service_peek());
 
   battery_state_service_subscribe(&handle_battery);
@@ -262,14 +339,16 @@ static void window_load(Window *window) {
   }
 	
   Tuplet initial_values[] = {
-    TupletCString(EFFECT_CURRENT_KEY, TEXT_LADDAR),
+    TupletCString(EFFECT_TOTALTIDAG_KEY, TEXT_LADDAR),
     TupletCString(EFFECT_FORECAST_KEY, TEXT_LADDAR),
-	TupletCString(EFFECT_BACKGROUND_KEY, string),
-	TupletCString(EFFECT_TEMPERATURE_KEY, "     "),
-	TupletCString(EFFECT_TEMPERATUREMODE_KEY, s_tempmode),
-	TupletCString(EFFECT_JUSTNU_KEY, TEXT_LADDAR)
+  	TupletCString(EFFECT_BACKGROUND_KEY, string),
+	  TupletCString(EFFECT_TEMPERATURE_KEY, "     "),
+	  TupletCString(EFFECT_TEMPERATUREMODE_KEY, s_tempmode),
+	  TupletCString(EFFECT_JUSTNU_KEY, TEXT_LADDAR),
+    TupletCString(EFFECT_SOFAR_KEY, TEXT_LADDAR),
+    TupletCString(EFFECT_MONTHFORECAST_KEY, TEXT_LADDAR)
   };
-
+ 
   app_sync_init(&sync, sync_buffer, sizeof(sync_buffer), initial_values, ARRAY_LENGTH(initial_values),
       sync_tuple_changed_callback, sync_error_callback, NULL);
 
@@ -299,6 +378,11 @@ static void window_unload(Window *window) {
   text_layer_destroy(temperature_layer);
   text_layer_destroy(connection_layer);
   text_layer_destroy(battery_layer);
+
+  text_layer_destroy(text5_layer);
+  text_layer_destroy(text6_layer);
+  text_layer_destroy(so_far_layer);
+  text_layer_destroy(estimate_month_layer);
 }
 
 static void init(void) {
@@ -316,10 +400,15 @@ static void init(void) {
 
   const bool animated = true;
   window_stack_push(window, animated);
+
+  // Subscribe to the accelerometer tap service
+  accel_tap_service_subscribe(tap_handler);
 }
 
 static void deinit(void) {
   window_destroy(window);
+
+  accel_tap_service_unsubscribe();
 }
 
 int main(void) {

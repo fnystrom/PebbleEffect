@@ -20,12 +20,12 @@ Pebble.addEventListener("showConfiguration", function() {
 
 Pebble.addEventListener("webviewclosed", function(e) {
     if (e.response !== '') {
-        var options = JSON.parse(decodeURIComponent(e.response));
-        window.localStorage.setItem('options', JSON.stringify(options));
-		var watchoptions = {'background':options.background,'tempmode':options.temperature};
-        //Pebble.showSimpleNotificationOnPebble("options", JSON.stringify(watchoptions));
-		//console.log(JSON.stringify(watchoptions));
-		Pebble.sendAppMessage(watchoptions, appMessageAck, appMessageNack);
+      var options = JSON.parse(decodeURIComponent(e.response));
+      window.localStorage.setItem('options', JSON.stringify(options));
+      var watchoptions = {'background':options.background,'tempmode':options.temperature};
+      //Pebble.showSimpleNotificationOnPebble("options", JSON.stringify(watchoptions));
+      //console.log(JSON.stringify(watchoptions));
+      Pebble.sendAppMessage(watchoptions, appMessageAck, appMessageNack);
     } else {
         //console.log("no options received");
     }
@@ -40,6 +40,90 @@ function today(){
   if(mm<10){mm='0'+mm;} 
   _today = yyyy+'-'+mm+'-'+dd;
   return _today;
+}
+
+function firstDayOfMonth(){
+  var _firstday = new Date();
+  var mm = _firstday.getMonth()+1; //January is 0!
+  var yyyy = _firstday.getFullYear();
+
+  if(mm<10){mm='0'+mm;} 
+  _firstday = yyyy+'-'+mm+'-01';
+  return _firstday;
+}
+
+function lastDayOfMonth(){
+  var _lastday = new Date();
+  var mm = _lastday.getMonth()+1; //January is 0!
+  var yyyy = _lastday.getFullYear();
+  var dd = daysOfCurrentMonth();
+  
+  if(mm<10){mm='0'+mm;} 
+  _lastday = yyyy+'-'+mm+'-'+dd;
+  return _lastday;
+}
+
+function daysOfCurrentMonth(){
+  var _today = new Date();
+  var mm = _today.getMonth()+1; //January is 0!
+  
+  if(mm === 1){
+    return 31;
+  }  
+  
+  if(mm === 2){
+    var yyyy = _today.getFullYear();
+    
+    var isLeap = new Date(yyyy, 1, 29).getMonth() == 1;
+    
+    if (isLeap){
+      return 29;
+    }
+    
+    return 28;
+  }
+  
+  if(mm === 3){
+    return 31;
+  }
+  
+  if(mm === 4){
+    return 30;
+  }
+  
+  if(mm === 5){
+    return 31;
+  }
+  
+  if(mm === 6){
+    return 30;
+  }
+  
+  if(mm === 7){
+    return 31;
+  }
+  
+  if(mm === 8){
+    return 31;
+  }
+  
+  if(mm === 9){
+    return 30;
+  }
+  
+  if(mm === 10){
+    return 31;
+  }
+  
+  if(mm === 11){
+    return 30;
+  }
+  
+  if(mm === 12){
+    return 31;
+  }
+
+  return 1;
 }
 
 function getTemperature(){
@@ -85,11 +169,11 @@ function fetchTodayEffect() {
   var accesstoken="";
   var options = JSON.parse(window.localStorage.getItem('options'));
   if (options === null) {
-    Pebble.sendAppMessage({"current":"--","forecast":"--"});
+    Pebble.sendAppMessage({"currentpower":"--","forecast":"--"});
     return;
   } else {
     if (options.accesstoken === null){
-      Pebble.sendAppMessage({"current":"--","forecast":"--"});
+      Pebble.sendAppMessage({"currentpower":"--","forecast":"--"});
       return;
     } else {
       accesstoken = options.accesstoken;	
@@ -104,7 +188,7 @@ function fetchTodayEffect() {
 
           var current, estimate;
           if (response) {
-			//console.log(JSON.stringify(response));
+			      //console.log(JSON.stringify(response));
             var hourCount = response.data.length;
             var totalEnergy=0;
 			
@@ -116,16 +200,75 @@ function fetchTodayEffect() {
 			
             current = Math.round(totalEnergy/1000) + "kWh";
             estimate = Math.round(totalEnergy/hourCount*24/1000) + "kWh";
-                        
+            
+			      //console.log("totaltidag=" + current);
+
             Pebble.sendAppMessage({
-              "current":current,
+              "totaltidag":current,
               "forecast":estimate});
           }
         } else {
           Pebble.sendAppMessage({
-              "current":"--",
+              "totaltidag":"--",
               "forecast":"--"});
-          //console.log("Error");
+          console.log("Error");
+        }
+      }
+    };
+	
+  req.send(null);
+}
+
+function fetchMonthEffect() {
+  //console.log("fetchMonthEffect");
+  var response;
+  var req = new XMLHttpRequest();
+  var accesstoken="";
+  var options = JSON.parse(window.localStorage.getItem('options'));
+  if (options === null) {
+    Pebble.sendAppMessage({"sofar":"--","monthforecast":"--"});
+    return;
+  } else {
+    if (options.accesstoken === null) {
+      Pebble.sendAppMessage({"sofar":"--","monthforecast":"--"});
+      return;
+    } else {
+      accesstoken = options.accesstoken;	
+    }
+  }
+
+	req.open('GET', "https://my.eliq.se/api/data?accesstoken="+accesstoken+"&startdate="+firstDayOfMonth()+"&enddate="+lastDayOfMonth()+"&intervaltype=day", true);
+    req.onload = function(e) {
+      if (req.readyState == 4) {
+        if(req.status == 200 || req.status == 201) {
+          response = JSON.parse(req.responseText);
+
+          var sofar, estimate;
+          if (response) {
+            //console.log(JSON.stringify(response));
+            var monthCount = response.data.length;
+            var totalEnergy=0;
+			
+            var i;
+            for(i=0; i<monthCount;i++){
+              var energy = response.data[i].energy;
+              totalEnergy += energy;
+            }
+			
+            sofar = Math.round(totalEnergy/1000) + "kWh";
+            estimate = Math.round(totalEnergy/monthCount*daysOfCurrentMonth()/1000) + "kWh";
+            
+            //console.log("sofar=" + sofar);
+
+            Pebble.sendAppMessage({
+              "sofar":sofar,
+              "monthforecast":estimate});
+          }
+        } else {
+          Pebble.sendAppMessage({
+              "sofar":"--",
+              "monthforecast":"--"});
+          console.log("Error");
         }
       }
     };
@@ -140,11 +283,11 @@ function fetchCurrentEffect() {
   var accesstoken="";
   var options = JSON.parse(window.localStorage.getItem('options'));
   if (options === null) {
-    Pebble.sendAppMessage({"current":"--","forecast":"--"});
+    Pebble.sendAppMessage({"currentpower":"--","forecast":"--"});
     return;
   } else {
     if (options.accesstoken === null){
-      Pebble.sendAppMessage({"current":"--","forecast":"--"});
+      Pebble.sendAppMessage({"currentpower":"--","forecast":"--"});
       return;
     } else {
       accesstoken = options.accesstoken;	
@@ -180,8 +323,7 @@ Pebble.addEventListener("ready",
                           //console.log("connect: " + e.type + ", ready:" + e.ready);
                           getTemperature();
                           fetchTodayEffect();
-  						  fetchCurrentEffect();
-							
+                          fetchCurrentEffect();
                         });
 
 Pebble.addEventListener("appmessage",
@@ -193,6 +335,9 @@ Pebble.addEventListener("appmessage",
 							} else if (e.payload.forecastpower == 1) {
 								//console.log("FORECAST REQUEST");
 								fetchTodayEffect();
+							} else if (e.payload.monthforecastpower == 1) {
+								//console.log("MONTH FORECAST REQUEST");
+								fetchMonthEffect();
 							} else if (e.payload.currentpower == 1) {
 								//console.log("CURRENT REQUEST");
 								fetchCurrentEffect();

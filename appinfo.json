@@ -1,44 +1,51 @@
 {
-    "versionLabel": "1.0.4",
-    "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
     "appKeys": {
-        "temperature": 6,
         "accesstoken": 4,
-        "tempmode": 10,
-        "justnu": 11,
-        "currentpower": 7,
-        "forecast": 2,
-        "current": 0,
         "background": 3,
+        "currentpower": 7,
         "estimate": 1,
+        "flickmode": 13,
+        "forecast": 2,
+        "forecastpower": 8,
+        "justnu": 11,
+        "monthforecast": 16,
+        "monthforecastpower": 14,
+        "sofar": 15,
+        "temperature": 6,
         "temperaturerequest": 9,
-        "forecastpower": 8
+        "tempmode": 10,
+        "totaltidag": 12
     },
-    "longName": "EliqEffect",
-    "versionCode": 12,
     "capabilities": [
         "configurable"
     ],
-    "shortName": "EliqEffect",
-    "companyName": "fnystrom",
-    "watchapp": {
-        "watchface": true
-    },
+    "companyName": "Novo Amne Konsult",
+    "longName": "EliqEffect",
+    "projectType": "native",
     "resources": {
         "media": [
             {
-                "trackingAdjust": 10,
-                "characterRegex": "[:0-9]",
-                "type": "font",
-                "name": "FONT_ROBOTO_BOLD_CONDENSED_SUBSET_40",
-                "file": "fonts/Roboto-BoldCondensed.ttf"
+                "file": "images/svartsmurf_24x28.png",
+                "menuIcon": true,
+                "name": "MENU_SVARTSMURF_24x28",
+                "type": "png"
             },
             {
-                "menuIcon": true,
-                "type": "png",
-                "name": "MENU_SVARTSMURF_24x28",
-                "file": "images/svartsmurf_24x28.png"
+                "characterRegex": "[:0-9]",
+                "compatibility": "2.7",
+                "file": "fonts/Roboto-BoldCondensed.ttf",
+                "name": "FONT_ROBOTO_BOLD_CONDENSED_SUBSET_40",
+                "trackingAdjust": 10,
+                "type": "font"
             }
         ]
+    },
+    "sdkVersion": "2",
+    "shortName": "EliqEffect",
+    "uuid": "6991be6b-8720-4b59-aeb8-be8b5f98c2eb",
+    "versionCode": 12,
+    "versionLabel": "1.1",
+    "watchapp": {
+        "watchface": true
     }
 }
